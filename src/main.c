@@ -35,6 +35,6 @@ int main(int numArguments, char** arguments)
 		fprintf(stderr, "Exiting. Reason: %s\n", exitReason);
 	}
 	sdlShutdown(window);
-	return 0;
+
 	return 0;
 }

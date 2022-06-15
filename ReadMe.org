@@ -1,3 +1,11 @@
 #+title: Space Factory
 
 A prototype for a game where your space ship is also a factory.
+
+* Setup
+
+#+BEGIN_SRC sh
+  git clone git@github.com:makuto/space-factory.git
+  git submodule update --init
+  ./Build.sh
+#+END_SRC

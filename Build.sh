@@ -13,6 +13,6 @@ echo "\n\nSpace Factory\n\n"
 
 CAKELISP=./Dependencies/cakelisp/bin/cakelisp
 
-$CAKELISP --verbose-processes \
+$CAKELISP --verbose-processes --execute \
 		  src/Config_Linux.cake \
 		  src/SpaceFactory.cake || exit $?
