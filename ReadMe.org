@@ -1,0 +1,3 @@
+#+title: Space Factory
+
+A prototype for a game where your space ship is also a factory.
