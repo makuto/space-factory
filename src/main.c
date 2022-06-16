@@ -5,6 +5,26 @@
 
 // From Cakelisp
 #include "SDL.cake.hpp"
+#include "SpaceFactory.cake.hpp"
+
+//
+// SpaceFactory.cake generates these
+//
+
+extern unsigned char _binary_assets_TileSheet_bmp_start;
+extern unsigned char _binary_assets_TileSheet_bmp_end;
+static unsigned char* startTilesheetBmp = (&_binary_assets_TileSheet_bmp_start);
+static unsigned char* endTilesheetBmp = (&_binary_assets_TileSheet_bmp_end);
+
+//
+// Constants
+//
+
+int c_arbitraryDelayTimeMilliseconds = 10;
+
+//
+// Grid
+//
 
 typedef unsigned char GridCell;
 
@@ -64,8 +84,6 @@ static void setGridSpaceFromString(GridSpace* gridSpace, const char* str)
 // Main
 //
 
-void initializeCakelisp();
-
 int main(int numArguments, char** arguments)
 {
 	fprintf(stderr, "Hello, world!\n");
@@ -73,27 +91,62 @@ int main(int numArguments, char** arguments)
 	SDL_Window* window = NULL;
 	if (!(sdlInitializeFor2d((&window), "Space Factory", 1920, 1080)))
 	{
+		fprintf(stderr, "Failed to initialize SDL\n");
 		return 1;
 	}
-	const char* exitReason = NULL;
 
+	// Initialize the hardware-accelerated 2D renderer
+	// I arbitrarily pick the first one.
+	// TODO: Figure out why this opens a new window
+	sdlList2dRenderDrivers();
+	SDL_Renderer* renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED);
+	if (!renderer)
+	{
+		sdlPrintError();
+		return 1;
+	}
+
+	// Set up bundled data
 	initializeCakelisp();
 
+	// Load tile sheet into texture
+	SDL_Texture* tileSheet = NULL;
+	{
+		SDL_RWops* tileSheetRWOps =
+		    SDL_RWFromMem(startTilesheetBmp, endTilesheetBmp - startTilesheetBmp);
+		SDL_Surface* tileSheetSurface = SDL_LoadBMP_RW(tileSheetRWOps, /*freesrc=*/1);
+		if (!tileSheetSurface)
+		{
+			fprintf(stderr, "Failed to load tile sheet\n");
+			return 1;
+		}
+		tileSheet = SDL_CreateTextureFromSurface(renderer, tileSheetSurface);
+		SDL_FreeSurface(tileSheetSurface);
+		if (!tileSheet)
+		{
+			sdlPrintError();
+			return 1;
+		}
+	}
+
+	// Make some grids
 	GridSpace* playerShip = createGridSpace(20, 9);
+	{
+		setGridSpaceFromString(playerShip,
+		                       "...................."
+		                       ".##################."
+		                       ".#................#."
+		                       ".#................#."
+		                       ".#................#."
+		                       ".#................#."
+		                       ".#................#."
+		                       ".##################."
+		                       "....................");
 
-	setGridSpaceFromString(playerShip,
-	                       "...................."
-	                       ".##################."
-	                       ".#................#."
-	                       ".#................#."
-	                       ".#................#."
-	                       ".#................#."
-	                       ".#................#."
-	                       ".##################."
-	                       "....................");
+		renderGridSpace(playerShip);
+	}
 
-	renderGridSpace(playerShip);
-
+	const char* exitReason = NULL;
 	while (!(exitReason))
 	{
 		SDL_Event event;
@@ -110,7 +163,15 @@ int main(int numArguments, char** arguments)
 			exitReason = "Escape pressed";
 		}
 
-		SDL_UpdateWindowSurface(window);
+		if (SDL_RenderCopy(renderer, tileSheet, NULL, NULL) != 0)
+		{
+			sdlPrintError();
+			exitReason = "SDL encountered error";
+		}
+
+		SDL_RenderPresent(renderer);
+		SDL_Delay(c_arbitraryDelayTimeMilliseconds);
+		/* SDL_UpdateWindowSurface(window); */
 	}
 
 	if (exitReason)
