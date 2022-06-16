@@ -178,18 +178,16 @@ int main(int numArguments, char** arguments)
 	TileSheet tileSheet = {{{'#', 0, 0}, {'.', 0, 1}}, tileSheetTexture};
 
 	// Make some grids
-	GridSpace* playerShip = createGridSpace(20, 9);
+	GridSpace* playerShip = createGridSpace(18, 7);
 	{
 		setGridSpaceFromString(playerShip,
-		                       "                    "
-		                       " ################## "
-		                       " #................# "
-		                       " #................# "
-		                       " #................# "
-		                       " #................# "
-		                       " #................# "
-		                       " ################## "
-		                       "                    ");
+		                       "##################"
+		                       "#................#"
+		                       "#................#"
+		                       "#................#"
+		                       "#................#"
+		                       "#................#"
+		                       "##################");
 
 		renderGridSpaceText(playerShip);
 	}
