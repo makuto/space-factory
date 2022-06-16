@@ -182,8 +182,8 @@ int main(int numArguments, char** arguments)
 	GridSpace playerShipData = {0};
 	playerShipData.width = 18;
 	playerShipData.height = 7;
-	GridCell playerShipCells[18][7];
-	playerShipData.data = &playerShipCells[0][0];
+	GridCell playerShipCells[18 * 7];
+	playerShipData.data = playerShipCells;
 	GridSpace* playerShip = &playerShipData;
 	{
 		setGridSpaceFromString(playerShip,
