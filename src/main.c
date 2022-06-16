@@ -66,12 +66,26 @@ static void renderGridSpaceText(GridSpace* gridSpace)
 	}
 }
 
+typedef enum TextureTransform
+{
+	TextureTransform_None,
+	TextureTransform_FlipHorizontal,
+	TextureTransform_FlipVertical,
+	TextureTransform_Clockwise90,
+	TextureTransform_CounterClockwise90,
+} TextureTransform;
+
+const float c_transformsToAngles[] = {0.f, 0.f, 0.f, 90.f, 270.f};
+const SDL_RendererFlip c_transformsToSDLRenderFlips[] = {
+    SDL_FLIP_NONE, SDL_FLIP_HORIZONTAL, SDL_FLIP_VERTICAL, SDL_FLIP_NONE, SDL_FLIP_NONE};
+
 typedef struct CharacterSheetCellAssociation
 {
 	char key;
 	// Values
 	char row;
 	char column;
+	char transform;
 } CharacterSheetCellAssociation;
 
 typedef struct TileSheet
@@ -104,8 +118,11 @@ static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int 
 					int screenY = originY + (cellY * c_tileSize);
 					SDL_Rect sourceRectangle = {textureX, textureY, c_tileSize, c_tileSize};
 					SDL_Rect destinationRectangle = {screenX, screenY, c_tileSize, c_tileSize};
-					SDL_RenderCopy(renderer, tileSheet->texture, &sourceRectangle,
-					               &destinationRectangle);
+					SDL_RenderCopyEx(renderer, tileSheet->texture, &sourceRectangle,
+					                 &destinationRectangle,
+					                 c_transformsToAngles[association->transform],
+					                 /*rotate about (default = center)*/ NULL,
+					                 c_transformsToSDLRenderFlips[association->transform]);
 					break;
 				}
 			}
@@ -128,54 +145,53 @@ static void setGridSpaceFromString(GridSpace* gridSpace, const char* str)
 	}
 }
 
-
-//Physics 
+// Physics
 //
 
+struct Vec2
+{
+	float x;
+	float y;
+};
 
- struct Vec2{
-	 float x;
-	 float y;
- };
+const float c_drag = 0.1f;
+const float c_deadLimit = 0.02f;  // the minimum velocity below which we are stationary
 
-const float drag = 0; 
-const float dead_limit = .02;//the minimum velocity below which we are stationary
+struct RigidBody
+{
+	Vec2 Position;
+	Vec2 Velocity;
+};
 
- struct RigidBody{
-	 Vec2 Position;
-	 Vec2 Velocity;
- };
-
-
-float Magnitude(Vec2* vec){
-	return sqrt(vec->x*vec->x + vec->y*vec->y);
+float Magnitude(Vec2* vec)
+{
+	return sqrt(vec->x * vec->x + vec->y * vec->y);
 }
 
+void UpdatePhysics(RigidBody* object, float dt)
+{
+	// update via implicit euler integration
+	object->Velocity.x /= (1.f + dt * c_drag);
+	object->Velocity.y /= (1.f + dt * c_drag);
+	//	 if(Magnitude(&object->Velocity)<=c_deadLimit){
+	//		 object->Velocity.x = 0;
+	//		 object->Velocity.y = 0;
+	//	 }
 
-void UpdatePhysics(RigidBody* object, float dt){
-	 //update via implicit euler integration 
-	 object->Velocity.x  /=(1+dt*drag);
-	 object->Velocity.y  /=(1+dt*drag);
-//	 if(Magnitude(&object->Velocity)<=dead_limit){
-//		 object->Velocity.x = 0;
-//		 object->Velocity.y = 0;
-//	 }
+	object->Position.x += object->Velocity.x * dt;
+	object->Position.y += object->Velocity.y * dt;
+}
 
-	 object->Position.x += object->Velocity.x *dt; 
-	 object->Position.y += object->Velocity.y *dt; 
-
- }
-
-
-RigidBody SpawnPlayerPhys(){
+RigidBody SpawnPlayerPhys()
+{
 	RigidBody player;
-	player.Position.x = 1.0;
-	player.Position.y = 1.0;
-	player.Velocity.x = 10.0;
-	player.Velocity.y = 10.0;
+	player.Position.x = 100.f;
+	player.Position.y = 100.f;
+	player.Velocity.x = 0.f;
+	player.Velocity.y = 0.f;
 	return player;
 }
- 
+
 //
 
 //
@@ -226,7 +242,30 @@ int main(int numArguments, char** arguments)
 			return 1;
 		}
 	}
-	TileSheet tileSheet = {{{'#', 0, 0}, {'.', 0, 1}}, tileSheetTexture};
+	TileSheet tileSheet = {{
+	                           // Wall
+	                           {'#', 0, 0, TextureTransform_None},
+	                           // Floor
+	                           {'.', 0, 1, TextureTransform_None},
+	                           // Conveyor to left
+	                           {'<', 0, 2, TextureTransform_None},
+	                           // Conveyor to right
+	                           {'>', 0, 2, TextureTransform_FlipHorizontal},
+	                           // Conveyor to up
+	                           {'A', 0, 2, TextureTransform_Clockwise90},
+	                           // Conveyor to down
+	                           {'V', 0, 2, TextureTransform_CounterClockwise90},
+	                           // Furnace
+	                           {'f', 2, 1, TextureTransform_None},
+	                           // Intake from right
+	                           {'c', 2, 0, TextureTransform_None},
+	                           // Engine to left (unpowered)
+	                           {'l', 1, 1, TextureTransform_FlipHorizontal},
+	                           {'r', 1, 1, TextureTransform_None},
+	                           {'u', 1, 1, TextureTransform_Clockwise90},
+	                           {'d', 1, 1, TextureTransform_CounterClockwise90},
+	                       },
+	                       tileSheetTexture};
 
 	// Make some grids
 	GridSpace playerShipData = {0};
@@ -239,10 +278,10 @@ int main(int numArguments, char** arguments)
 		setGridSpaceFromString(playerShip,
 		                       "##################"
 		                       "#................#"
-		                       "#................#"
-		                       "#................#"
-		                       "#................#"
-		                       "#................#"
+		                       "l<<<<<<<<<<<<<f<<c"
+		                       "l<<<<<<<<<.V<<f<<c"
+		                       "#........A.V.....#"
+		                       "#........A<<.....#"
 		                       "##################");
 
 		renderGridSpaceText(playerShip);
@@ -265,17 +304,22 @@ int main(int numArguments, char** arguments)
 		{
 			exitReason = "Escape pressed";
 		}
-		const float shipThrust = 10;
-		if(currentKeyStates[SDL_SCANCODE_W]){
+
+		const float shipThrust = 20.f;
+		if (currentKeyStates[SDL_SCANCODE_W] || currentKeyStates[SDL_SCANCODE_UP])
+		{
 			playerPhys.Velocity.y = -shipThrust;
 		}
-		if(currentKeyStates[SDL_SCANCODE_S]){
+		if (currentKeyStates[SDL_SCANCODE_S] || currentKeyStates[SDL_SCANCODE_DOWN])
+		{
 			playerPhys.Velocity.y = shipThrust;
 		}
-		if(currentKeyStates[SDL_SCANCODE_A]){
+		if (currentKeyStates[SDL_SCANCODE_A] || currentKeyStates[SDL_SCANCODE_LEFT])
+		{
 			playerPhys.Velocity.x = -shipThrust;
 		}
-		if(currentKeyStates[SDL_SCANCODE_D]){
+		if (currentKeyStates[SDL_SCANCODE_D] || currentKeyStates[SDL_SCANCODE_RIGHT])
+		{
 			playerPhys.Velocity.x = shipThrust;
 		}
 
@@ -286,14 +330,16 @@ int main(int numArguments, char** arguments)
 		//	sdlPrintError();
 		//	exitReason = "SDL encountered error";
 		//}
-		
-		renderGridSpaceFromTileSheet(playerShip, playerPhys.Position.x, playerPhys.Position.y, renderer, &tileSheet);
-		UpdatePhysics(&playerPhys,.1);
 
-         	//fprintf(stderr, "Player Position x: %f y: %f",playerPhys.Position.x,playerPhys.Position.y);
+		renderGridSpaceFromTileSheet(playerShip, playerPhys.Position.x, playerPhys.Position.y,
+		                             renderer, &tileSheet);
+		UpdatePhysics(&playerPhys, .1);
+
+		// fprintf(stderr, "Player Position x: %f y:
+		// %f",playerPhys.Position.x,playerPhys.Position.y);
 		SDL_RenderPresent(renderer);
 		SDL_Delay(c_arbitraryDelayTimeMilliseconds);
-		 SDL_UpdateWindowSurface(window); 
+		SDL_UpdateWindowSurface(window);
 	}
 
 	if (exitReason)
