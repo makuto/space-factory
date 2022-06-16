@@ -69,8 +69,8 @@ typedef struct CharacterSheetCellAssociation
 {
 	char key;
 	// Values
-	char x;
-	char y;
+	char column;
+	char row;
 } CharacterSheetCellAssociation;
 
 typedef struct TileSheet
@@ -100,8 +100,8 @@ static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, SDL_Renderer* ren
 				    &tileSheet->associations[tileAssociation];
 				if (tileToFind == association->key)
 				{
-					int textureX = association->x * c_tileSize;
-					int textureY = association->y * c_tileSize;
+					int textureX = association->row * c_tileSize;
+					int textureY = association->column * c_tileSize;
 					int screenX = originX + (cellX * c_tileSize);
 					int screenY = originY + (cellY * c_tileSize);
 					SDL_Rect sourceRectangle = {textureX, textureY, c_tileSize, c_tileSize};
