@@ -80,6 +80,35 @@ static void setGridSpaceFromString(GridSpace* gridSpace, const char* str)
 	}
 }
 
+
+//Physics 
+//
+
+
+ struct Vec2{
+	 float x;
+	 float y;
+ };
+
+ struct RigidBody{
+	 Vec2 Position;
+	 Vec2 Velocity;
+	 float drag = 1.2;//put drag on the rigidbody, not the environment, that way we can make really big stuff slow down faster or whatever we want
+ };
+
+ 
+
+ void UpdatePhysics(RigidBody* object, float dt){
+	 //update via implicit euler integration 
+	 object->Velocity.x = Object.Velocity.x/drag;
+	 object->Velocity.y = Object.Velocity.y/drag;
+
+	 object->Positon.x += object.Velocity.x *dt; 
+	 object->Positon.y += object.Velocity.y *dt; 
+ }
+ 
+//
+
 //
 // Main
 //
