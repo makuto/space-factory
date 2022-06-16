@@ -211,6 +211,8 @@ int main(int numArguments, char** arguments)
 			exitReason = "Escape pressed";
 		}
 
+		SDL_RenderClear(renderer);
+
 		// if (SDL_RenderCopy(renderer, tileSheetTexture, NULL, NULL) != 0)
 		//{
 		//	sdlPrintError();
