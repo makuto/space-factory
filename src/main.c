@@ -64,15 +64,20 @@ static void setGridSpaceFromString(GridSpace* gridSpace, const char* str)
 // Main
 //
 
+void initializeCakelisp();
+
 int main(int numArguments, char** arguments)
 {
 	fprintf(stderr, "Hello, world!\n");
+
 	SDL_Window* window = NULL;
 	if (!(sdlInitializeFor2d((&window), "Space Factory", 1920, 1080)))
 	{
 		return 1;
 	}
 	const char* exitReason = NULL;
+
+	initializeCakelisp();
 
 	GridSpace* playerShip = createGridSpace(20, 9);
 

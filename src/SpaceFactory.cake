@@ -3,7 +3,9 @@
 (add-cakelisp-search-directory "Dependencies/cakelisp/runtime")
 (add-cakelisp-search-directory "src")
 
-(import "SDL.cake")
+(import "SDL.cake" "DataBundle.cake")
+
+(bundle-file start-tilesheet-bmp end-tilesheet-bmp (unsigned char) "assets/TileSheet.bmp")
 
 (add-c-search-directory-global "src")
 
@@ -22,3 +24,7 @@
   (set-cakelisp-option executable-output "SpaceFactory.exe"))
  (true
   (set-cakelisp-option executable-output "space-factory")))
+
+
+(defun initialize-cakelisp ()
+  (data-bundle-load-all-resources))
