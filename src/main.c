@@ -137,22 +137,43 @@ static void setGridSpaceFromString(GridSpace* gridSpace, const char* str)
 	 float y;
  };
 
+const float drag = 0; 
+const float dead_limit = .02;//the minimum velocity below which we are stationary
+
  struct RigidBody{
 	 Vec2 Position;
 	 Vec2 Velocity;
-	 float drag = 1.2;//put drag on the rigidbody, not the environment, that way we can make really big stuff slow down faster or whatever we want
  };
 
- 
 
- void UpdatePhysics(RigidBody* object, float dt){
+float Magnitude(Vec2* vec){
+	return sqrt(vec->x*vec->x + vec->y*vec->y);
+}
+
+
+void UpdatePhysics(RigidBody* object, float dt){
 	 //update via implicit euler integration 
-	 object->Velocity.x = Object.Velocity.x/drag;
-	 object->Velocity.y = Object.Velocity.y/drag;
+	 object->Velocity.x  /=(1+dt*drag);
+	 object->Velocity.y  /=(1+dt*drag);
+//	 if(Magnitude(&object->Velocity)<=dead_limit){
+//		 object->Velocity.x = 0;
+//		 object->Velocity.y = 0;
+//	 }
 
-	 object->Positon.x += object.Velocity.x *dt; 
-	 object->Positon.y += object.Velocity.y *dt; 
+	 object->Position.x += object->Velocity.x *dt; 
+	 object->Position.y += object->Velocity.y *dt; 
+
  }
+
+
+RigidBody SpawnPlayerPhys(){
+	RigidBody player;
+	player.Position.x = 1.0;
+	player.Position.y = 1.0;
+	player.Velocity.x = 10.0;
+	player.Velocity.y = 10.0;
+	return player;
+}
  
 //
 
@@ -223,6 +244,7 @@ int main(int numArguments, char** arguments)
 		renderGridSpaceText(playerShip);
 	}
 
+	RigidBody playerPhys = SpawnPlayerPhys();
 	const char* exitReason = NULL;
 	while (!(exitReason))
 	{
@@ -247,15 +269,14 @@ int main(int numArguments, char** arguments)
 		//	sdlPrintError();
 		//	exitReason = "SDL encountered error";
 		//}
+		
+		renderGridSpaceFromTileSheet(playerShip, playerPhys.Position.x, playerPhys.Position.y, renderer, &tileSheet);
+		UpdatePhysics(&playerPhys,.1);
 
-		int playerX = 0;
-		int playerY = 0;
-
-		renderGridSpaceFromTileSheet(playerShip, playerX, playerY, renderer, &tileSheet);
-
+         	//fprintf(stderr, "Player Position x: %f y: %f",playerPhys.Position.x,playerPhys.Position.y);
 		SDL_RenderPresent(renderer);
 		SDL_Delay(c_arbitraryDelayTimeMilliseconds);
-		/* SDL_UpdateWindowSurface(window); */
+		 SDL_UpdateWindowSurface(window); 
 	}
 
 	freeGridSpace(playerShip);
