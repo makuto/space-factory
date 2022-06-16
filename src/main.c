@@ -38,20 +38,21 @@ typedef struct GridSpace
 
 #define GridCellAt(gridSpace, x, y) gridSpace->data[(y * gridSpace->width) + x]
 
-static GridSpace* createGridSpace(unsigned char width, unsigned char height)
-{
-	char* mem = (char*)malloc(sizeof(GridSpace) + (width * height * sizeof(GridCell)));
-	GridSpace* newSpace = (GridSpace*)mem;
-	newSpace->width = width;
-	newSpace->height = height;
-	newSpace->data = (GridCell*)(mem + sizeof(GridSpace));
-	return newSpace;
-}
+// Let's try to keep it static for now
+/* static GridSpace* createGridSpace(unsigned char width, unsigned char height) */
+/* { */
+/* 	char* mem = (char*)malloc(sizeof(GridSpace) + (width * height * sizeof(GridCell))); */
+/* 	GridSpace* newSpace = (GridSpace*)mem; */
+/* 	newSpace->width = width; */
+/* 	newSpace->height = height; */
+/* 	newSpace->data = (GridCell*)(mem + sizeof(GridSpace)); */
+/* 	return newSpace; */
+/* } */
 
-static void freeGridSpace(GridSpace* gridSpace)
-{
-	free(gridSpace);
-}
+/* static void freeGridSpace(GridSpace* gridSpace) */
+/* { */
+/* 	free(gridSpace); */
+/* } */
 
 static void renderGridSpaceText(GridSpace* gridSpace)
 {
@@ -228,18 +229,21 @@ int main(int numArguments, char** arguments)
 	TileSheet tileSheet = {{{'#', 0, 0}, {'.', 0, 1}}, tileSheetTexture};
 
 	// Make some grids
-	GridSpace* playerShip = createGridSpace(20, 9);
+	GridSpace playerShipData = {0};
+	playerShipData.width = 18;
+	playerShipData.height = 7;
+	GridCell playerShipCells[18 * 7];
+	playerShipData.data = playerShipCells;
+	GridSpace* playerShip = &playerShipData;
 	{
 		setGridSpaceFromString(playerShip,
-		                       "                    "
-		                       " ################## "
-		                       " #................# "
-		                       " #................# "
-		                       " #................# "
-		                       " #................# "
-		                       " #................# "
-		                       " ################## "
-		                       "                    ");
+		                       "##################"
+		                       "#................#"
+		                       "#................#"
+		                       "#................#"
+		                       "#................#"
+		                       "#................#"
+		                       "##################");
 
 		renderGridSpaceText(playerShip);
 	}
@@ -291,8 +295,6 @@ int main(int numArguments, char** arguments)
 		SDL_Delay(c_arbitraryDelayTimeMilliseconds);
 		 SDL_UpdateWindowSurface(window); 
 	}
-
-	freeGridSpace(playerShip);
 
 	if (exitReason)
 	{
