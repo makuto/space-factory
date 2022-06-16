@@ -261,6 +261,19 @@ int main(int numArguments, char** arguments)
 		{
 			exitReason = "Escape pressed";
 		}
+		const float shipThrust = 10;
+		if(currentKeyStates[SDL_SCANCODE_W]){
+			playerPhys.Velocity.y = -shipThrust;
+		}
+		if(currentKeyStates[SDL_SCANCODE_S]){
+			playerPhys.Velocity.y = shipThrust;
+		}
+		if(currentKeyStates[SDL_SCANCODE_A]){
+			playerPhys.Velocity.x = -shipThrust;
+		}
+		if(currentKeyStates[SDL_SCANCODE_D]){
+			playerPhys.Velocity.x = shipThrust;
+		}
 
 		SDL_RenderClear(renderer);
 
