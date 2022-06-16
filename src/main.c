@@ -20,7 +20,8 @@ static unsigned char* endTilesheetBmp = (&_binary_assets_TileSheet_bmp_end);
 // Constants
 //
 
-int c_arbitraryDelayTimeMilliseconds = 10;
+const int c_arbitraryDelayTimeMilliseconds = 10;
+const char c_tileSize = 32;
 
 //
 // Grid
@@ -28,12 +29,12 @@ int c_arbitraryDelayTimeMilliseconds = 10;
 
 typedef unsigned char GridCell;
 
-struct GridSpace
+typedef struct GridSpace
 {
 	unsigned char width;
 	unsigned char height;
 	GridCell* data;
-};
+} GridSpace;
 
 #define GridCellAt(gridSpace, x, y) gridSpace->data[(y * gridSpace->width) + x]
 
@@ -52,16 +53,65 @@ static void freeGridSpace(GridSpace* gridSpace)
 	free(gridSpace);
 }
 
-static void renderGridSpace(GridSpace* gridSpace)
+static void renderGridSpaceText(GridSpace* gridSpace)
 {
 	for (int y = 0; y < gridSpace->height; ++y)
 	{
 		for (int x = 0; x < gridSpace->width; ++x)
 		{
-			// draw...
 			fprintf(stderr, "%c", GridCellAt(gridSpace, x, y));
 		}
 		fprintf(stderr, "\n");
+	}
+}
+
+typedef struct CharacterSheetCellAssociation
+{
+	char key;
+	// Values
+	char x;
+	char y;
+} CharacterSheetCellAssociation;
+
+typedef struct TileSheet
+{
+	// That's how big the tile sheet is!
+	CharacterSheetCellAssociation associations[4 * 4];
+
+	SDL_Texture* texture;
+} TileSheet;
+
+static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, SDL_Renderer* renderer,
+                                         TileSheet* tileSheet)
+{
+	int originX = 0;
+	int originY = 0;
+	for (int cellY = 0; cellY < gridSpace->height; ++cellY)
+	{
+		for (int cellX = 0; cellX < gridSpace->width; ++cellX)
+		{
+			// draw...
+			char tileToFind = GridCellAt(gridSpace, cellX, cellY);
+			for (int tileAssociation = 0; tileAssociation < sizeof(tileSheet->associations) /
+			                                                    sizeof(tileSheet->associations[0]);
+			     ++tileAssociation)
+			{
+				CharacterSheetCellAssociation* association =
+				    &tileSheet->associations[tileAssociation];
+				if (tileToFind == association->key)
+				{
+					int textureX = association->x * c_tileSize;
+					int textureY = association->y * c_tileSize;
+					int screenX = originX + (cellX * c_tileSize);
+					int screenY = originY + (cellY * c_tileSize);
+					SDL_Rect sourceRectangle = {textureX, textureY, c_tileSize, c_tileSize};
+					SDL_Rect destinationRectangle = {screenX, screenY, c_tileSize, c_tileSize};
+					SDL_RenderCopy(renderer, tileSheet->texture, &sourceRectangle,
+					               &destinationRectangle);
+					break;
+				}
+			}
+		}
 	}
 }
 
@@ -110,7 +160,7 @@ int main(int numArguments, char** arguments)
 	initializeCakelisp();
 
 	// Load tile sheet into texture
-	SDL_Texture* tileSheet = NULL;
+	SDL_Texture* tileSheetTexture = NULL;
 	{
 		SDL_RWops* tileSheetRWOps =
 		    SDL_RWFromMem(startTilesheetBmp, endTilesheetBmp - startTilesheetBmp);
@@ -120,30 +170,31 @@ int main(int numArguments, char** arguments)
 			fprintf(stderr, "Failed to load tile sheet\n");
 			return 1;
 		}
-		tileSheet = SDL_CreateTextureFromSurface(renderer, tileSheetSurface);
+		tileSheetTexture = SDL_CreateTextureFromSurface(renderer, tileSheetSurface);
 		SDL_FreeSurface(tileSheetSurface);
-		if (!tileSheet)
+		if (!tileSheetTexture)
 		{
 			sdlPrintError();
 			return 1;
 		}
 	}
+	TileSheet tileSheet = {{{'#', 0, 0}, {'.', 0, 1}}, tileSheetTexture};
 
 	// Make some grids
 	GridSpace* playerShip = createGridSpace(20, 9);
 	{
 		setGridSpaceFromString(playerShip,
-		                       "...................."
-		                       ".##################."
-		                       ".#................#."
-		                       ".#................#."
-		                       ".#................#."
-		                       ".#................#."
-		                       ".#................#."
-		                       ".##################."
-		                       "....................");
+		                       "                    "
+		                       " ################## "
+		                       " #................# "
+		                       " #................# "
+		                       " #................# "
+		                       " #................# "
+		                       " #................# "
+		                       " ################## "
+		                       "                    ");
 
-		renderGridSpace(playerShip);
+		renderGridSpaceText(playerShip);
 	}
 
 	const char* exitReason = NULL;
@@ -163,11 +214,13 @@ int main(int numArguments, char** arguments)
 			exitReason = "Escape pressed";
 		}
 
-		if (SDL_RenderCopy(renderer, tileSheet, NULL, NULL) != 0)
-		{
-			sdlPrintError();
-			exitReason = "SDL encountered error";
-		}
+		// if (SDL_RenderCopy(renderer, tileSheetTexture, NULL, NULL) != 0)
+		//{
+		//	sdlPrintError();
+		//	exitReason = "SDL encountered error";
+		//}
+
+		renderGridSpaceFromTileSheet(playerShip, renderer, &tileSheet);
 
 		SDL_RenderPresent(renderer);
 		SDL_Delay(c_arbitraryDelayTimeMilliseconds);
