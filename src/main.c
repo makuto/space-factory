@@ -69,8 +69,8 @@ typedef struct CharacterSheetCellAssociation
 {
 	char key;
 	// Values
-	char column;
 	char row;
+	char column;
 } CharacterSheetCellAssociation;
 
 typedef struct TileSheet
@@ -82,14 +82,12 @@ typedef struct TileSheet
 } TileSheet;
 
 static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int originY,
-										 SDL_Renderer* renderer,
-                                         TileSheet* tileSheet)
+                                         SDL_Renderer* renderer, TileSheet* tileSheet)
 {
 	for (int cellY = 0; cellY < gridSpace->height; ++cellY)
 	{
 		for (int cellX = 0; cellX < gridSpace->width; ++cellX)
 		{
-			// draw...
 			char tileToFind = GridCellAt(gridSpace, cellX, cellY);
 			for (int tileAssociation = 0; tileAssociation < sizeof(tileSheet->associations) /
 			                                                    sizeof(tileSheet->associations[0]);
@@ -99,8 +97,8 @@ static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int 
 				    &tileSheet->associations[tileAssociation];
 				if (tileToFind == association->key)
 				{
-					int textureX = association->row * c_tileSize;
-					int textureY = association->column * c_tileSize;
+					int textureX = association->column * c_tileSize;
+					int textureY = association->row * c_tileSize;
 					int screenX = originX + (cellX * c_tileSize);
 					int screenY = originY + (cellY * c_tileSize);
 					SDL_Rect sourceRectangle = {textureX, textureY, c_tileSize, c_tileSize};
@@ -228,6 +226,8 @@ int main(int numArguments, char** arguments)
 		SDL_Delay(c_arbitraryDelayTimeMilliseconds);
 		/* SDL_UpdateWindowSurface(window); */
 	}
+
+	freeGridSpace(playerShip);
 
 	if (exitReason)
 	{
