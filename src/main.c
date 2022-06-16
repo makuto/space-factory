@@ -81,11 +81,10 @@ typedef struct TileSheet
 	SDL_Texture* texture;
 } TileSheet;
 
-static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, SDL_Renderer* renderer,
+static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int originY,
+										 SDL_Renderer* renderer,
                                          TileSheet* tileSheet)
 {
-	int originX = 0;
-	int originY = 0;
 	for (int cellY = 0; cellY < gridSpace->height; ++cellY)
 	{
 		for (int cellX = 0; cellX < gridSpace->width; ++cellX)
@@ -220,7 +219,10 @@ int main(int numArguments, char** arguments)
 		//	exitReason = "SDL encountered error";
 		//}
 
-		renderGridSpaceFromTileSheet(playerShip, renderer, &tileSheet);
+		int playerX = 0;
+		int playerY = 0;
+
+		renderGridSpaceFromTileSheet(playerShip, playerX, playerY, renderer, &tileSheet);
 
 		SDL_RenderPresent(renderer);
 		SDL_Delay(c_arbitraryDelayTimeMilliseconds);
