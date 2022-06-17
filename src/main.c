@@ -208,6 +208,9 @@ RigidBody SpawnPlayerPhys()
 typedef struct Object
 {
 	char type;
+	bool inFactory = false;
+	unsigned char tilex = 0;
+	unsigned char tiley = 0;
 	RigidBody body;
 } Object;
 
@@ -412,48 +415,73 @@ int main(int numArguments, char** arguments)
 
 		for(int i = 0; i < ARRAY_SIZE(objects); i++){
 			Object* currentObject = &objects[i];
-			if(!currentObject->type)
+			if(!currentObject->type )
 				continue;
+			if(!currentObject->inFactory)
+				UpdatePhysics(&currentObject->body,deltaTime);
 
-
-			UpdatePhysics(&currentObject->body,deltaTime);
 			float objShipLocalx =  (currentObject->body.position.x - playerPhys.position.x)/c_tileSize;
 			float objShipLocaly = (currentObject->body.position.y - playerPhys.position.y)/c_tileSize;
+			if(objShipLocaly <-1 || objShipLocaly > (playerShipData.height+1) || objShipLocalx < -1 || objShipLocalx > (playerShipData.width+1))
+				continue;
 			
 		        unsigned char shipTilex = (unsigned char) objShipLocalx;
 		        unsigned char shipTiley = (unsigned char) objShipLocaly;
+			
+			
 			GridCell cell = GridCellAt((&playerShipData),shipTilex,shipTiley);
+			if(currentObject->inFactory){
+				currentObject->body.position.x = (currentObject->tilex*c_tileSize) + playerPhys.position.x;
+				currentObject->body.position.y = (currentObject->tiley*c_tileSize) + playerPhys.position.y;
+				currentObject->body.velocity.x = 0; 
+				currentObject->body.velocity.y = 0; 
+				continue;
+			}
+
+
 			if(cell=='#' || cell == 'l' || cell == 'r' || cell == 'd'){
 				if(objShipLocaly>0 && objShipLocaly <=playerShipData.height ){
 					//detect collision with edges
 					if ((int)objShipLocalx == playerShipData.width-1 || (int)objShipLocalx == playerShipData.width-2){
-						currentObject->body.velocity.x = playerPhys.velocity.x;
-					}
+							currentObject->body.velocity.x = playerPhys.velocity.x;
+
 					if ((int)objShipLocalx == 0)
-						currentObject->body.velocity.x = playerPhys.velocity.x;
+							currentObject->body.velocity.x = playerPhys.velocity.x;
+					}
+
 				}
 				if(objShipLocalx>0 && objShipLocalx <=playerShipData.width ){
 					//detect collision with edges
 					if ((int)objShipLocaly == playerShipData.height-1)
-						currentObject->body.velocity.y = playerPhys.velocity.y;
+							currentObject->body.velocity.y = playerPhys.velocity.y;
 					if ((int)objShipLocaly == 0)
-						currentObject->body.velocity.y = playerPhys.velocity.y;
+							currentObject->body.velocity.y = playerPhys.velocity.y;
 				}
 			}
+			
 				
 
 		
 			if(objShipLocalx>0 && objShipLocalx <= playerShipData.width ){
 				if(objShipLocaly>0 && objShipLocaly <= playerShipData.height ){
-					//if the object is inside the ship, then get the tile by getting the integer coordinate of the object
-					GridCell cell = GridCellAt((&playerShipData),shipTilex,shipTiley);
 					if (currentKeyStates[SDL_SCANCODE_SPACE] || currentKeyStates[SDL_SCANCODE_RIGHT])
 					{
 				       		fprintf(stderr,"Asteroid in ship Cell: (%d,%d), cell type: %c \n",shipTilex, shipTiley,cell);
 					}
+					if(cell == 'c'){
+						currentObject->body.position.x = ((shipTilex)*c_tileSize) + playerPhys.position.x;
+						currentObject->body.position.y = (shipTiley*c_tileSize) + playerPhys.position.y;
+						currentObject->body.velocity.x = 0; 
+						currentObject->body.velocity.y = 0; 
+						currentObject->tilex = shipTilex;
+						currentObject->tiley = shipTiley;
+						currentObject->inFactory = true;
+					}
 
 				}
 			}
+
+		    
 		}
 
 		SDL_RenderClear(renderer);
