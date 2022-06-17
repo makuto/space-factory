@@ -287,6 +287,7 @@ int main(int numArguments, char** arguments)
 			return 1;
 		}
 	}
+	// TODO: Turn this into a direct lookup table
 	TileSheet tileSheet = {{
 	                           // Wall
 	                           {'#', 0, 0, TextureTransform_None},
@@ -325,13 +326,13 @@ int main(int numArguments, char** arguments)
 	GridSpace* playerShip = &playerShipData;
 	{
 		setGridSpaceFromString(playerShip,
-		                       "##################"
+		                       "#######d##########"
 		                       "#................#"
 		                       "l<<<<<<<<<<<<<f<<c"
 		                       "l<<<<<<<<<.V<<f<<c"
 		                       "#........A.V.....#"
-		                       "#........A<<.....#"
-		                       "##################");
+		                       "#........A<<.....r"
+		                       "#######u##########");
 
 		renderGridSpaceText(playerShip);
 	}
