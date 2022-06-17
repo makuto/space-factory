@@ -32,7 +32,7 @@ const float c_shipThrust = 300.f;
 const float c_maxSpeed = 1500.f;
 
 // Physics
-const float c_drag = 1.f;
+const float c_drag = .1f;
 const float c_deadLimit = 0.02f;  // the minimum velocity below which we are stationary
 
 //
@@ -243,10 +243,12 @@ void renderObjects(SDL_Renderer* renderer, TileSheet* tileSheet)
 	}
 }
 
+
+
+
 //
 // Main
 //
-
 int main(int numArguments, char** arguments)
 {
 	fprintf(stderr, "Hello, world!\n");
@@ -349,12 +351,14 @@ int main(int numArguments, char** arguments)
 	RigidBody playerPhys = SpawnPlayerPhys();
 
 	// Make some objects
-	for (int i = 0; i < 15; ++i)
+	for (int i = 0; i < 40; ++i)
 	{
 		Object* testObject = &objects[i];
 		testObject->type = 'U';
 		testObject->body.position.x = (float)(rand() % 1000);
 		testObject->body.position.y = (float)(rand() % 1000);
+	//	testObject->body.velocity.x = (float)(rand() % 1000);
+	//	testObject->body.velocity.y = (float)(rand() % 1000);
 	}
 
 	// Main loop
@@ -405,6 +409,52 @@ int main(int numArguments, char** arguments)
 		if (playerPhys.velocity.x < -c_maxSpeed) playerPhys.velocity.x = -c_maxSpeed;
 
 		UpdatePhysics(&playerPhys, deltaTime);
+
+		for(int i = 0; i < ARRAY_SIZE(objects); i++){
+			Object* currentObject = &objects[i];
+			if(!currentObject->type)
+				continue;
+
+
+			UpdatePhysics(&currentObject->body,deltaTime);
+			float objShipLocalx =  (currentObject->body.position.x - playerPhys.position.x)/c_tileSize;
+			float objShipLocaly = (currentObject->body.position.y - playerPhys.position.y)/c_tileSize;
+			
+		        unsigned char shipTilex = (unsigned char) objShipLocalx;
+		        unsigned char shipTiley = (unsigned char) objShipLocaly;
+			GridCell cell = GridCellAt((&playerShipData),shipTilex,shipTiley);
+			if(cell=='#' || cell == 'l' || cell == 'r' || cell == 'd'){
+				if(objShipLocaly>0 && objShipLocaly <=playerShipData.height ){
+					//detect collision with edges
+					if ((int)objShipLocalx == playerShipData.width-1 || (int)objShipLocalx == playerShipData.width-2){
+						currentObject->body.velocity.x = playerPhys.velocity.x;
+					}
+					if ((int)objShipLocalx == 0)
+						currentObject->body.velocity.x = playerPhys.velocity.x;
+				}
+				if(objShipLocalx>0 && objShipLocalx <=playerShipData.width ){
+					//detect collision with edges
+					if ((int)objShipLocaly == playerShipData.height-1)
+						currentObject->body.velocity.y = playerPhys.velocity.y;
+					if ((int)objShipLocaly == 0)
+						currentObject->body.velocity.y = playerPhys.velocity.y;
+				}
+			}
+				
+
+		
+			if(objShipLocalx>0 && objShipLocalx <= playerShipData.width ){
+				if(objShipLocaly>0 && objShipLocaly <= playerShipData.height ){
+					//if the object is inside the ship, then get the tile by getting the integer coordinate of the object
+					GridCell cell = GridCellAt((&playerShipData),shipTilex,shipTiley);
+					if (currentKeyStates[SDL_SCANCODE_SPACE] || currentKeyStates[SDL_SCANCODE_RIGHT])
+					{
+				       		fprintf(stderr,"Asteroid in ship Cell: (%d,%d), cell type: %c \n",shipTilex, shipTiley,cell);
+					}
+
+				}
+			}
+		}
 
 		SDL_RenderClear(renderer);
 
