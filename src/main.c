@@ -24,7 +24,7 @@ static unsigned char* endTilesheetBmp = (&_binary_assets_TileSheet_bmp_end);
 //
 
 // Rendering
-const int c_arbitraryDelayTimeMilliseconds = 10;
+/* const int c_arbitraryDelayTimeMilliseconds = 10; */
 const char c_tileSize = 32;
 
 // Ship
@@ -251,20 +251,26 @@ int main(int numArguments, char** arguments)
 {
 	fprintf(stderr, "Hello, world!\n");
 
-	SDL_Window* window = NULL;
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
 	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
-	if (!(sdlInitializeFor2d((&window), "Space Factory", 1920, 1080)))
+	SDL_Window* window =
+	    SDL_CreateWindow("Space Factory", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1920,
+	                     1080, (SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL));
+	if (!window)
+	/* if (!(sdlInitializeFor2d((&window), "Space Factory", 1920, 1080))) */
 	{
 		fprintf(stderr, "Failed to initialize SDL\n");
 		return 1;
 	}
 
 	// Initialize the hardware-accelerated 2D renderer
-	// I arbitrarily pick the first one.
+	// Note: I had to set the driver to -1 so that a compatible one is automatically chosen.
+	// Otherwise, I get a window that doesn't vsync
 	// TODO: Figure out why this opens a new window
 	sdlList2dRenderDrivers();
 	SDL_Renderer* renderer =
-	    SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+	    SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	if (!renderer)
 	{
 		sdlPrintError();
@@ -370,8 +376,6 @@ int main(int numArguments, char** arguments)
 		Uint64 frameDiffTicks = (currentCounterTicks - lastFrameNumTicks);
 		float deltaTime = (frameDiffTicks / ((float)performanceNumTicksPerSecond));
 
-		fprintf(stderr, "%f\n", deltaTime);
-
 		SDL_Event event;
 		while (SDL_PollEvent((&event)))
 		{
@@ -421,7 +425,7 @@ int main(int numArguments, char** arguments)
 		lastFrameNumTicks = SDL_GetPerformanceCounter();
 		SDL_RenderPresent(renderer);
 		SDL_UpdateWindowSurface(window);
-		SDL_Delay(c_arbitraryDelayTimeMilliseconds);
+		/* SDL_Delay(c_arbitraryDelayTimeMilliseconds); */
 	}
 
 	if (exitReason)
