@@ -1,11 +1,14 @@
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "SDL.h"
 
 // From Cakelisp
 #include "SDL.cake.hpp"
 #include "SpaceFactory.cake.hpp"
+
+#define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
 //
 // SpaceFactory.cake generates these
@@ -104,27 +107,26 @@ static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int 
 		for (int cellX = 0; cellX < gridSpace->width; ++cellX)
 		{
 			char tileToFind = GridCellAt(gridSpace, cellX, cellY);
-			for (int tileAssociation = 0; tileAssociation < sizeof(tileSheet->associations) /
-			                                                    sizeof(tileSheet->associations[0]);
+			for (int tileAssociation = 0; tileAssociation < ARRAY_SIZE(tileSheet->associations);
 			     ++tileAssociation)
 			{
 				CharacterSheetCellAssociation* association =
 				    &tileSheet->associations[tileAssociation];
-				if (tileToFind == association->key)
-				{
-					int textureX = association->column * c_tileSize;
-					int textureY = association->row * c_tileSize;
-					int screenX = originX + (cellX * c_tileSize);
-					int screenY = originY + (cellY * c_tileSize);
-					SDL_Rect sourceRectangle = {textureX, textureY, c_tileSize, c_tileSize};
-					SDL_Rect destinationRectangle = {screenX, screenY, c_tileSize, c_tileSize};
-					SDL_RenderCopyEx(renderer, tileSheet->texture, &sourceRectangle,
-					                 &destinationRectangle,
-					                 c_transformsToAngles[association->transform],
-					                 /*rotate about (default = center)*/ NULL,
-					                 c_transformsToSDLRenderFlips[association->transform]);
-					break;
-				}
+				if (tileToFind != association->key)
+					continue;
+
+				int textureX = association->column * c_tileSize;
+				int textureY = association->row * c_tileSize;
+				int screenX = originX + (cellX * c_tileSize);
+				int screenY = originY + (cellY * c_tileSize);
+				SDL_Rect sourceRectangle = {textureX, textureY, c_tileSize, c_tileSize};
+				SDL_Rect destinationRectangle = {screenX, screenY, c_tileSize, c_tileSize};
+				SDL_RenderCopyEx(renderer, tileSheet->texture, &sourceRectangle,
+				                 &destinationRectangle,
+				                 c_transformsToAngles[association->transform],
+				                 /*rotate about (default = center)*/ NULL,
+				                 c_transformsToSDLRenderFlips[association->transform]);
+				break;
 			}
 		}
 	}
@@ -145,6 +147,7 @@ static void setGridSpaceFromString(GridSpace* gridSpace, const char* str)
 	}
 }
 
+//
 // Physics
 //
 
@@ -159,8 +162,8 @@ const float c_deadLimit = 0.02f;  // the minimum velocity below which we are sta
 
 struct RigidBody
 {
-	Vec2 Position;
-	Vec2 Velocity;
+	Vec2 position;
+	Vec2 velocity;
 };
 
 float Magnitude(Vec2* vec)
@@ -171,28 +174,68 @@ float Magnitude(Vec2* vec)
 void UpdatePhysics(RigidBody* object, float dt)
 {
 	// update via implicit euler integration
-	object->Velocity.x /= (1.f + dt * c_drag);
-	object->Velocity.y /= (1.f + dt * c_drag);
-	//	 if(Magnitude(&object->Velocity)<=c_deadLimit){
-	//		 object->Velocity.x = 0;
-	//		 object->Velocity.y = 0;
+	object->velocity.x /= (1.f + dt * c_drag);
+	object->velocity.y /= (1.f + dt * c_drag);
+	//	 if(Magnitude(&object->velocity)<=c_deadLimit){
+	//		 object->velocity.x = 0;
+	//		 object->velocity.y = 0;
 	//	 }
 
-	object->Position.x += object->Velocity.x * dt;
-	object->Position.y += object->Velocity.y * dt;
+	object->position.x += object->velocity.x * dt;
+	object->position.y += object->velocity.y * dt;
 }
 
 RigidBody SpawnPlayerPhys()
 {
 	RigidBody player;
-	player.Position.x = 100.f;
-	player.Position.y = 100.f;
-	player.Velocity.x = 0.f;
-	player.Velocity.y = 0.f;
+	player.position.x = 100.f;
+	player.position.y = 100.f;
+	player.velocity.x = 0.f;
+	player.velocity.y = 0.f;
 	return player;
 }
 
 //
+// Objects
+//
+
+typedef struct Object
+{
+	char type;
+	RigidBody body;
+} Object;
+
+Object objects[1024] = {0};
+
+void renderObjects(SDL_Renderer* renderer, TileSheet* tileSheet)
+{
+	for (int i = 0; i < ARRAY_SIZE(objects); ++i)
+	{
+		const Object* currentObject = &objects[i];
+		if (!currentObject->type)
+			continue;
+
+		for (int tileAssociation = 0; tileAssociation < ARRAY_SIZE(tileSheet->associations);
+		     ++tileAssociation)
+		{
+			CharacterSheetCellAssociation* association = &tileSheet->associations[tileAssociation];
+			if (currentObject->type != association->key)
+				continue;
+
+			int textureX = association->column * c_tileSize;
+			int textureY = association->row * c_tileSize;
+			int screenX = currentObject->body.position.x;
+			int screenY = currentObject->body.position.y;
+			SDL_Rect sourceRectangle = {textureX, textureY, c_tileSize, c_tileSize};
+			SDL_Rect destinationRectangle = {screenX, screenY, c_tileSize, c_tileSize};
+			SDL_RenderCopyEx(renderer, tileSheet->texture, &sourceRectangle, &destinationRectangle,
+			                 c_transformsToAngles[association->transform],
+			                 /*rotate about (default = center)*/ NULL,
+			                 c_transformsToSDLRenderFlips[association->transform]);
+			break;
+		}
+	}
+}
 
 //
 // Main
@@ -264,6 +307,10 @@ int main(int numArguments, char** arguments)
 	                           {'r', 1, 1, TextureTransform_None},
 	                           {'u', 1, 1, TextureTransform_Clockwise90},
 	                           {'d', 1, 1, TextureTransform_CounterClockwise90},
+
+	                           // Objects
+							   // Unrefined fuel
+	                           {'U', 0, 3, TextureTransform_None},
 	                       },
 	                       tileSheetTexture};
 
@@ -287,6 +334,15 @@ int main(int numArguments, char** arguments)
 		renderGridSpaceText(playerShip);
 	}
 
+	// Make some objects
+	for (int i = 0; i < 15; ++i)
+	{
+		Object* testObject = &objects[i];
+		testObject->type = 'U';
+		testObject->body.position.x = (float)(rand() % 1000);
+		testObject->body.position.y = (float)(rand() % 1000);
+	}
+
 	RigidBody playerPhys = SpawnPlayerPhys();
 	const char* exitReason = NULL;
 	while (!(exitReason))
@@ -308,20 +364,22 @@ int main(int numArguments, char** arguments)
 		const float shipThrust = 20.f;
 		if (currentKeyStates[SDL_SCANCODE_W] || currentKeyStates[SDL_SCANCODE_UP])
 		{
-			playerPhys.Velocity.y = -shipThrust;
+			playerPhys.velocity.y = -shipThrust;
 		}
 		if (currentKeyStates[SDL_SCANCODE_S] || currentKeyStates[SDL_SCANCODE_DOWN])
 		{
-			playerPhys.Velocity.y = shipThrust;
+			playerPhys.velocity.y = shipThrust;
 		}
 		if (currentKeyStates[SDL_SCANCODE_A] || currentKeyStates[SDL_SCANCODE_LEFT])
 		{
-			playerPhys.Velocity.x = -shipThrust;
+			playerPhys.velocity.x = -shipThrust;
 		}
 		if (currentKeyStates[SDL_SCANCODE_D] || currentKeyStates[SDL_SCANCODE_RIGHT])
 		{
-			playerPhys.Velocity.x = shipThrust;
+			playerPhys.velocity.x = shipThrust;
 		}
+
+		UpdatePhysics(&playerPhys, .1);
 
 		SDL_RenderClear(renderer);
 
@@ -331,12 +389,13 @@ int main(int numArguments, char** arguments)
 		//	exitReason = "SDL encountered error";
 		//}
 
-		renderGridSpaceFromTileSheet(playerShip, playerPhys.Position.x, playerPhys.Position.y,
+		renderGridSpaceFromTileSheet(playerShip, playerPhys.position.x, playerPhys.position.y,
 		                             renderer, &tileSheet);
-		UpdatePhysics(&playerPhys, .1);
 
-		// fprintf(stderr, "Player Position x: %f y:
-		// %f",playerPhys.Position.x,playerPhys.Position.y);
+		renderObjects(renderer, &tileSheet);
+
+		// fprintf(stderr, "Player position x: %f y:
+		// %f",playerPhys.position.x,playerPhys.position.y);
 		SDL_RenderPresent(renderer);
 		SDL_Delay(c_arbitraryDelayTimeMilliseconds);
 		SDL_UpdateWindowSurface(window);
