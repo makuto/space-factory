@@ -254,11 +254,8 @@ int main(int numArguments, char** arguments)
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
 	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
-	SDL_Window* window =
-	    SDL_CreateWindow("Space Factory", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1920,
-	                     1080, (SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL));
-	if (!window)
-	/* if (!(sdlInitializeFor2d((&window), "Space Factory", 1920, 1080))) */
+	SDL_Window* window = NULL;
+	if (!(sdlInitializeFor2d((&window), "Space Factory", 1920, 1080)))
 	{
 		fprintf(stderr, "Failed to initialize SDL\n");
 		return 1;
@@ -267,16 +264,10 @@ int main(int numArguments, char** arguments)
 	// Initialize the hardware-accelerated 2D renderer
 	// Note: I had to set the driver to -1 so that a compatible one is automatically chosen.
 	// Otherwise, I get a window that doesn't vsync
-	// TODO: Figure out why this opens a new window
 	sdlList2dRenderDrivers();
 	SDL_Renderer* renderer =
 	    SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	if (!renderer)
-	{
-		sdlPrintError();
-		return 1;
-	}
-	if (SDL_RenderSetVSync(renderer, 1) != 0 || SDL_GL_SetSwapInterval(1) != 0)
 	{
 		sdlPrintError();
 		return 1;
