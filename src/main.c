@@ -277,6 +277,8 @@ int main(int numArguments, char** arguments)
 			fprintf(stderr, "Failed to load tile sheet\n");
 			return 1;
 		}
+		// Use pure black as our chroma key
+		SDL_SetColorKey(tileSheetSurface, SDL_TRUE, SDL_MapRGB(tileSheetSurface->format, 0, 0, 0));
 		tileSheetTexture = SDL_CreateTextureFromSurface(renderer, tileSheetSurface);
 		SDL_FreeSurface(tileSheetSurface);
 		if (!tileSheetTexture)
@@ -309,7 +311,7 @@ int main(int numArguments, char** arguments)
 	                           {'d', 1, 1, TextureTransform_CounterClockwise90},
 
 	                           // Objects
-							   // Unrefined fuel
+	                           // Unrefined fuel
 	                           {'U', 0, 3, TextureTransform_None},
 	                       },
 	                       tileSheetTexture};
