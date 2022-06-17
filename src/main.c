@@ -23,8 +23,17 @@ static unsigned char* endTilesheetBmp = (&_binary_assets_TileSheet_bmp_end);
 // Constants
 //
 
+// Rendering
 const int c_arbitraryDelayTimeMilliseconds = 10;
 const char c_tileSize = 32;
+
+// Ship
+const float c_shipThrust = 300.f;
+const float c_maxSpeed = 1500.f;
+
+// Physics
+const float c_drag = 0.1f;
+const float c_deadLimit = 0.02f;  // the minimum velocity below which we are stationary
 
 //
 // Grid
@@ -157,9 +166,6 @@ struct Vec2
 	float y;
 };
 
-const float c_drag = 0.1f;
-const float c_deadLimit = 0.02f;  // the minimum velocity below which we are stationary
-
 struct RigidBody
 {
 	Vec2 position;
@@ -174,8 +180,8 @@ float Magnitude(Vec2* vec)
 void UpdatePhysics(RigidBody* object, float dt)
 {
 	// update via implicit euler integration
-	object->velocity.x /= (1.f + dt * c_drag);
-	object->velocity.y /= (1.f + dt * c_drag);
+	object->velocity.x /= (1.f + (dt * c_drag));
+	object->velocity.y /= (1.f + (dt * c_drag));
 	//	 if(Magnitude(&object->velocity)<=c_deadLimit){
 	//		 object->velocity.x = 0;
 	//		 object->velocity.y = 0;
@@ -262,6 +268,11 @@ int main(int numArguments, char** arguments)
 		sdlPrintError();
 		return 1;
 	}
+	if (SDL_RenderSetVSync(renderer, 1) != 0)
+	{
+		sdlPrintError();
+		return 1;
+	}
 
 	// Set up bundled data
 	initializeCakelisp();
@@ -336,6 +347,7 @@ int main(int numArguments, char** arguments)
 
 		renderGridSpaceText(playerShip);
 	}
+	RigidBody playerPhys = SpawnPlayerPhys();
 
 	// Make some objects
 	for (int i = 0; i < 15; ++i)
@@ -346,10 +358,18 @@ int main(int numArguments, char** arguments)
 		testObject->body.position.y = (float)(rand() % 1000);
 	}
 
-	RigidBody playerPhys = SpawnPlayerPhys();
+	// Main loop
+	Uint64 lastFrameNumTicks = SDL_GetPerformanceCounter();
+	const Uint64 performanceNumTicksPerSecond = SDL_GetPerformanceFrequency();
 	const char* exitReason = NULL;
 	while (!(exitReason))
 	{
+		Uint64 currentCounterTicks = SDL_GetPerformanceCounter();
+		Uint64 frameDiffTicks = (currentCounterTicks - lastFrameNumTicks);
+		float deltaTime = (frameDiffTicks / ((float)performanceNumTicksPerSecond));
+
+		fprintf(stderr, "%f\n", deltaTime);
+
 		SDL_Event event;
 		while (SDL_PollEvent((&event)))
 		{
@@ -364,9 +384,7 @@ int main(int numArguments, char** arguments)
 			exitReason = "Escape pressed";
 		}
 
-		float deltaTime = 0.033f;
-		const float shipThrust = 30.f * deltaTime;
-		const float c_maxSpeed = 150.f;
+		float shipThrust = c_shipThrust * deltaTime;
 		if (currentKeyStates[SDL_SCANCODE_W] || currentKeyStates[SDL_SCANCODE_UP])
 		{
 			playerPhys.velocity.y += -shipThrust;
@@ -393,22 +411,15 @@ int main(int numArguments, char** arguments)
 
 		SDL_RenderClear(renderer);
 
-		// if (SDL_RenderCopy(renderer, tileSheetTexture, NULL, NULL) != 0)
-		//{
-		//	sdlPrintError();
-		//	exitReason = "SDL encountered error";
-		//}
-
 		renderGridSpaceFromTileSheet(playerShip, playerPhys.position.x, playerPhys.position.y,
 		                             renderer, &tileSheet);
 
 		renderObjects(renderer, &tileSheet);
 
-		// fprintf(stderr, "Player position x: %f y:
-		// %f",playerPhys.position.x,playerPhys.position.y);
+		lastFrameNumTicks = SDL_GetPerformanceCounter();
 		SDL_RenderPresent(renderer);
-		SDL_Delay(c_arbitraryDelayTimeMilliseconds);
 		SDL_UpdateWindowSurface(window);
+		SDL_Delay(c_arbitraryDelayTimeMilliseconds);
 	}
 
 	if (exitReason)
