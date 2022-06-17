@@ -364,25 +364,32 @@ int main(int numArguments, char** arguments)
 			exitReason = "Escape pressed";
 		}
 
-		const float shipThrust = 20.f;
+		float deltaTime = 0.033f;
+		const float shipThrust = 30.f * deltaTime;
+		const float c_maxSpeed = 150.f;
 		if (currentKeyStates[SDL_SCANCODE_W] || currentKeyStates[SDL_SCANCODE_UP])
 		{
-			playerPhys.velocity.y = -shipThrust;
+			playerPhys.velocity.y += -shipThrust;
 		}
 		if (currentKeyStates[SDL_SCANCODE_S] || currentKeyStates[SDL_SCANCODE_DOWN])
 		{
-			playerPhys.velocity.y = shipThrust;
+			playerPhys.velocity.y += shipThrust;
 		}
 		if (currentKeyStates[SDL_SCANCODE_A] || currentKeyStates[SDL_SCANCODE_LEFT])
 		{
-			playerPhys.velocity.x = -shipThrust;
+			playerPhys.velocity.x += -shipThrust;
 		}
 		if (currentKeyStates[SDL_SCANCODE_D] || currentKeyStates[SDL_SCANCODE_RIGHT])
 		{
-			playerPhys.velocity.x = shipThrust;
+			playerPhys.velocity.x += shipThrust;
 		}
 
-		UpdatePhysics(&playerPhys, .1);
+		if (playerPhys.velocity.y > c_maxSpeed) playerPhys.velocity.y = c_maxSpeed;
+		if (playerPhys.velocity.y < -c_maxSpeed) playerPhys.velocity.y = -c_maxSpeed;
+		if (playerPhys.velocity.x > c_maxSpeed) playerPhys.velocity.x = c_maxSpeed;
+		if (playerPhys.velocity.x < -c_maxSpeed) playerPhys.velocity.x = -c_maxSpeed;
+
+		UpdatePhysics(&playerPhys, deltaTime);
 
 		SDL_RenderClear(renderer);
 
