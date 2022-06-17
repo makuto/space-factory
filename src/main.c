@@ -32,7 +32,7 @@ const float c_shipThrust = 300.f;
 const float c_maxSpeed = 1500.f;
 
 // Physics
-const float c_drag = 0.1f;
+const float c_drag = 1.f;
 const float c_deadLimit = 0.02f;  // the minimum velocity below which we are stationary
 
 //
@@ -252,6 +252,7 @@ int main(int numArguments, char** arguments)
 	fprintf(stderr, "Hello, world!\n");
 
 	SDL_Window* window = NULL;
+	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
 	if (!(sdlInitializeFor2d((&window), "Space Factory", 1920, 1080)))
 	{
 		fprintf(stderr, "Failed to initialize SDL\n");
@@ -262,13 +263,14 @@ int main(int numArguments, char** arguments)
 	// I arbitrarily pick the first one.
 	// TODO: Figure out why this opens a new window
 	sdlList2dRenderDrivers();
-	SDL_Renderer* renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED);
+	SDL_Renderer* renderer =
+	    SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	if (!renderer)
 	{
 		sdlPrintError();
 		return 1;
 	}
-	if (SDL_RenderSetVSync(renderer, 1) != 0)
+	if (SDL_RenderSetVSync(renderer, 1) != 0 || SDL_GL_SetSwapInterval(1) != 0)
 	{
 		sdlPrintError();
 		return 1;
