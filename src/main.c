@@ -561,8 +561,47 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 }
 
 //
+// Ship editing
+//
+
+static void renderEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWidth,
+                         int windowHeight)
+{
+	int mouseX = 0;
+	int mouseY = 0;
+	Uint32 mouseButtonState = SDL_GetMouseState(&mouseX, &mouseY);
+	char editButtons[] = {'#', '.', '<', '>', 'A', 'V', 'f', 'c', 'l', 'r', 'u', 'd'};
+	int buttonMarginX = 5;
+	int startButtonBarX = ((windowWidth / 2) - ((ARRAY_SIZE(editButtons) * (c_tileSize + buttonMarginX)) / 2));
+	int buttonBarY = 32;
+	for (int buttonIndex = 0; buttonIndex < ARRAY_SIZE(editButtons); ++buttonIndex)
+	{
+		for (int tileAssociation = 0; tileAssociation < ARRAY_SIZE(tileSheet->associations);
+		     ++tileAssociation)
+		{
+			CharacterSheetCellAssociation* association = &tileSheet->associations[tileAssociation];
+			if (editButtons[buttonIndex] != association->key)
+				continue;
+
+			int textureX = association->column * c_tileSize;
+			int textureY = association->row * c_tileSize;
+			int screenX = startButtonBarX + (buttonIndex * (c_tileSize + buttonMarginX));
+			int screenY = buttonBarY;
+			SDL_Rect sourceRectangle = {textureX, textureY, c_tileSize, c_tileSize};
+			SDL_Rect destinationRectangle = {screenX, screenY, c_tileSize, c_tileSize};
+			SDL_RenderCopyEx(renderer, tileSheet->texture, &sourceRectangle, &destinationRectangle,
+			                 c_transformsToAngles[association->transform],
+			                 /*rotate about (default = center)*/ NULL,
+			                 c_transformsToSDLRenderFlips[association->transform]);
+			break;
+		}
+	}
+}
+
+//
 // Main
 //
+
 int main(int numArguments, char** arguments)
 {
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
@@ -851,6 +890,8 @@ int main(int numArguments, char** arguments)
 		                             renderer, &tileSheet);
 
 		renderObjects(renderer, &tileSheet);
+
+		renderEditUI(renderer, &tileSheet, windowWidth, windowHeight);
 
 		lastFrameNumTicks = SDL_GetPerformanceCounter();
 		SDL_RenderPresent(renderer);
