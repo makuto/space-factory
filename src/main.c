@@ -267,20 +267,20 @@ static void setGridSpaceFromString(GridSpace* gridSpace, const char* str)
 
 static void renderStarField(SDL_Renderer* renderer)
 {
-	static SDL_FRect stars[1024] = {0};
+	static SDL_FRect stars[128] = {0};
 	static bool starsInitialized = false;
 	if (!starsInitialized)
 	{
 		for (int i = 0; i < ARRAY_SIZE(stars); ++i)
 		{
-			stars[i].x = rand() % 4000;
-			stars[i].y = rand() % 4000;
-			stars[i].w = rand() % 3 + 1;
-			stars[i].h = rand() % 3 + 1;
+			stars[i].x = rand() % 1920;
+			stars[i].y = rand() % 1080;
+			stars[i].w = rand() % 5 + 1;
+			stars[i].h = rand() % 5 + 1;
 		}
 		starsInitialized = true;
 	}
-	SDL_SetRenderDrawColor(renderer, 240, 240, 240, 255);
+	SDL_SetRenderDrawColor(renderer, 128, 128, 128, 255);
 	SDL_RenderFillRectsF(renderer, stars, ARRAY_SIZE(stars));
 }
 
