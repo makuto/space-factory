@@ -585,7 +585,9 @@ void snapCameraToGrid(Camera* camera,Vec2* position, GridSpace* grid){
 //
 
 static GridCell* pickGridCellFromWorldSpace(Vec2 gridSpaceWorldPosition, GridSpace* searchGridSpace,
-                                            Vec2 pickWorldPosition)
+                                            Vec2 pickWorldPosition,
+                                            unsigned char* selectionCellXOut,
+                                            unsigned char* selectionCellYOut)
 {
 	float gridSpaceX = (pickWorldPosition.x - gridSpaceWorldPosition.x) / c_tileSize;
 	float gridSpaceY = (pickWorldPosition.y - gridSpaceWorldPosition.y) / c_tileSize;
@@ -596,7 +598,30 @@ static GridCell* pickGridCellFromWorldSpace(Vec2 gridSpaceWorldPosition, GridSpa
 	unsigned char cellX = (unsigned char)gridSpaceX;
 	unsigned char cellY = (unsigned char)gridSpaceY;
 
+	if (selectionCellXOut)
+		*selectionCellXOut = cellX;
+	if (selectionCellYOut)
+		*selectionCellYOut = cellY;
 	return &GridCellAt(searchGridSpace, cellX, cellY);
+}
+
+static void drawOutlineRectangle(SDL_Renderer* renderer, SDL_Rect* rectangleToOutline,
+                                 Uint32 mouseButtonState)
+{
+	const int selectionRectanglePadding = 3;
+	SDL_Rect selectionRectangle = *rectangleToOutline;
+	selectionRectangle.x -= selectionRectanglePadding;
+	selectionRectangle.y -= selectionRectanglePadding;
+	selectionRectangle.w += selectionRectanglePadding * 2;
+	selectionRectangle.h += selectionRectanglePadding * 2;
+
+	if (mouseButtonState & SDL_BUTTON_LMASK)
+		SDL_SetRenderDrawColor(renderer, 251, 227, 205, 255);
+	else
+		SDL_SetRenderDrawColor(renderer, 255, 178, 109, 255);
+
+	// Indicate selection
+	SDL_RenderFillRect(renderer, &selectionRectangle);
 }
 
 static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWidth,
@@ -628,13 +653,6 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 			SDL_Rect sourceRectangle = {textureX, textureY, c_tileSize, c_tileSize};
 			SDL_Rect destinationRectangle = {screenX, screenY, c_tileSize, c_tileSize};
 
-			SDL_Rect selectionRectangle = destinationRectangle;
-			const int selectionRectanglePadding = 3;
-			selectionRectangle.x -= selectionRectanglePadding;
-			selectionRectangle.y -= selectionRectanglePadding;
-			selectionRectangle.w += selectionRectanglePadding * 2;
-			selectionRectangle.h += selectionRectanglePadding * 2;
-
 			if (mouseX >= destinationRectangle.x &&
 			    mouseX <= destinationRectangle.x + destinationRectangle.w &&
 			    mouseY >= destinationRectangle.y &&
@@ -644,18 +662,14 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 				{
 					fprintf(stderr, "Selected %c\n", editButtons[buttonIndex]);
 					currentSelectedTileType = editButtons[buttonIndex];
-					SDL_SetRenderDrawColor(renderer, 251, 227, 205, 255);
 				}
-				else
-					SDL_SetRenderDrawColor(renderer, 255, 178, 109, 255);
 
-				// Indicate selection
-				SDL_RenderFillRect(renderer, &selectionRectangle);
+				drawOutlineRectangle(renderer, &destinationRectangle, mouseButtonState);
 			}
 			else if (currentSelectedTileType == editButtons[buttonIndex])
 			{
-				SDL_SetRenderDrawColor(renderer, 240, 127, 24, 255);
-				SDL_RenderFillRect(renderer, &selectionRectangle);
+				// TODO: This should probably be a different color
+				drawOutlineRectangle(renderer, &destinationRectangle, mouseButtonState);
 			}
 
 			SDL_RenderCopyEx(renderer, tileSheet->texture, &sourceRectangle, &destinationRectangle,
@@ -667,10 +681,35 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 	}
 
 	Vec2 pickWorldPosition = {mouseX + cameraPosition.x, mouseY + cameraPosition.y};
-	GridCell* selectedCell =
-	    pickGridCellFromWorldSpace(gridSpaceWorldPosition, editGridSpace, pickWorldPosition);
+	unsigned char selectedCellX = 0;
+	unsigned char selectedCellY = 0;
+	GridCell* selectedCell = pickGridCellFromWorldSpace(
+	    gridSpaceWorldPosition, editGridSpace, pickWorldPosition, &selectedCellX, &selectedCellY);
 	if (selectedCell)
 	{
+		for (int tileAssociation = 0; tileAssociation < ARRAY_SIZE(tileSheet->associations);
+		     ++tileAssociation)
+		{
+			CharacterSheetCellAssociation* association = &tileSheet->associations[tileAssociation];
+			if (currentSelectedTileType != association->key)
+				continue;
+
+			int textureX = association->column * c_tileSize;
+			int textureY = association->row * c_tileSize;
+			int screenX = (gridSpaceWorldPosition.x - cameraPosition.x) + (selectedCellX * c_tileSize);
+			int screenY = (gridSpaceWorldPosition.y - cameraPosition.y) + (selectedCellY * c_tileSize);
+			SDL_Rect sourceRectangle = {textureX, textureY, c_tileSize, c_tileSize};
+			SDL_Rect destinationRectangle = {screenX, screenY, c_tileSize, c_tileSize};
+
+			drawOutlineRectangle(renderer, &destinationRectangle, mouseButtonState);
+
+			SDL_RenderCopyEx(renderer, tileSheet->texture, &sourceRectangle, &destinationRectangle,
+			                 c_transformsToAngles[association->transform],
+			                 /*rotate about (default = center)*/ NULL,
+			                 c_transformsToSDLRenderFlips[association->transform]);
+			break;
+		}
+
 		if (mouseButtonState & SDL_BUTTON_LMASK)
 		{
 			selectedCell->type = currentSelectedTileType;
