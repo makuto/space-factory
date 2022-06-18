@@ -925,6 +925,18 @@ int main(int numArguments, char** arguments)
 				continue;
 			if (!currentObject->inFactory)
 				UpdatePhysics(&currentObject->body, c_objectDrag, deltaTime);
+			else
+			{
+				// if the object has been captured into the ship factory, snap it to its tile
+				// location, and don't update any other physics
+				currentObject->body.position.x =
+				    (currentObject->tileX * c_tileSize) + playerPhys.position.x;
+				currentObject->body.position.y =
+				    (currentObject->tileY * c_tileSize) + playerPhys.position.y;
+				currentObject->body.velocity.x = 0;
+				currentObject->body.velocity.y = 0;
+				continue;
+			}
 
 			// check for collisions by converting to tile space when in the proximity of the ship
 			float objShipLocalX =
@@ -942,18 +954,6 @@ int main(int numArguments, char** arguments)
 			if (objShipLocalX < playerShipData.width && objShipLocalX >= 0 &&
 			    objShipLocalY < playerShipData.height && objShipLocalY >= 0)
 				cell = GridCellAt((&playerShipData), shipTileX, shipTileY);
-			if (currentObject->inFactory)
-			{
-				// if the object has been captured into the ship factory, snap it to its tile
-				// location, and don't update any other physics
-				currentObject->body.position.x =
-				    (currentObject->tileX * c_tileSize) + playerPhys.position.x;
-				currentObject->body.position.y =
-				    (currentObject->tileY * c_tileSize) + playerPhys.position.y;
-				currentObject->body.velocity.x = 0;
-				currentObject->body.velocity.y = 0;
-				continue;
-			}
 
 			// otherwise check collisions with solid tiles, and update accordingly
 			if (cell.type == '#' || isEngineTile(cell.type))
@@ -986,12 +986,6 @@ int main(int numArguments, char** arguments)
 			{
 				if (objShipLocalY > 0 && objShipLocalY <= playerShipData.height)
 				{
-					if (currentKeyStates[SDL_SCANCODE_SPACE] ||
-					    currentKeyStates[SDL_SCANCODE_RIGHT])
-					{
-						/* fprintf(stderr, "Asteroid in ship Cell: (%d,%d), cell type: %c \n", */
-						/* shipTileX, shipTileY, cell.type); */
-					}
 					if (cell.type == 'c')
 					{
 						currentObject->body.position.x =
