@@ -45,7 +45,8 @@ const float c_shipThrust = 300.f;
 const float c_maxSpeed = 1500.f;
 
 // Physics
-const float c_drag = .1f;
+const float c_playerDrag = 0.1f;
+const float c_objectDrag = 0.f;
 const float c_deadLimit = 0.02f;  // the minimum velocity below which we are stationary
 
 // Factory
@@ -318,11 +319,11 @@ float Magnitude(Vec2* vec)
 	return sqrt(vec->x * vec->x + vec->y * vec->y);
 }
 
-void UpdatePhysics(RigidBody* object, float dt)
+void UpdatePhysics(RigidBody* object, float drag, float dt)
 {
 	// update via implicit euler integration
-	object->velocity.x /= (1.f + (dt * c_drag));
-	object->velocity.y /= (1.f + (dt * c_drag));
+	object->velocity.x /= (1.f + (dt * drag));
+	object->velocity.y /= (1.f + (dt * drag));
 	//	 if(Magnitude(&object->velocity)<=c_deadLimit){
 	//		 object->velocity.x = 0;
 	//		 object->velocity.y = 0;
@@ -448,10 +449,10 @@ typedef struct TileDelta
 {
 	char x;
 	char y;
-	char oppositeConveyor;
+	char conveyor;
 } TileDelta;
 // Useful to check all cardinal directions of a tile
-static const TileDelta c_deltas[] = {{-1, 0, '>'}, {1, 0, '<'}, {0, -1, 'V'}, {0, 1, 'A'}};
+static const TileDelta c_deltas[] = {{-1, 0, '<'}, {1, 0, '>'}, {0, -1, 'A'}, {0, 1, 'V'}};
 
 void doFactory(GridSpace* gridSpace, float deltaTime)
 {
@@ -502,8 +503,11 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 						    currentObject->tileY != cellY)
 							continue;
 
-						// TODO This isn't very safe because if <1, the object will never transition
-						currentObject->transition += c_furnaceTransitionPerSecond * deltaTime;
+						// Move objects along which aren't unrefined the same speed as a conveyor
+						if (currentObject->type == 'U')
+							currentObject->transition += c_furnaceTransitionPerSecond * deltaTime;
+						else
+							currentObject->transition += c_conveyorTransitionPerSecond * deltaTime;
 						if (currentObject->transition > c_transitionThreshold)
 						{
 							// TODO: Make generic FindAwayConveyor function
@@ -523,10 +527,11 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 								GridCell* cellTo =
 								    &GridCellAt(gridSpace, directionCellX, directionCellY);
 								// TODO: Hack to "randomly" distribute objects in directions
-								if (cellTo->type != c_deltas[directionIndex].oppositeConveyor &&
+								if (cellTo->type == c_deltas[directionIndex].conveyor &&
 								    rand() % 4 == 0)
 								{
-									currentObject->type = 'R';
+									if (currentObject->type == 'U')
+										currentObject->type = 'R';
 									currentObject->tileX += c_deltas[directionIndex].x;
 									currentObject->tileY += c_deltas[directionIndex].y;
 									currentObject->transition = 0;
@@ -576,15 +581,56 @@ void snapCameraToGrid(Camera* camera,Vec2* position, GridSpace* grid){
 }
 
 //
+// Ship editing
+//
+
+static void renderEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWidth,
+                         int windowHeight)
+{
+	int mouseX = 0;
+	int mouseY = 0;
+	Uint32 mouseButtonState = SDL_GetMouseState(&mouseX, &mouseY);
+	char editButtons[] = {'#', '.', '<', '>', 'A', 'V', 'f', 'c', 'l', 'r', 'u', 'd'};
+	int buttonMarginX = 5;
+	int startButtonBarX = ((windowWidth / 2) - ((ARRAY_SIZE(editButtons) * (c_tileSize + buttonMarginX)) / 2));
+	int buttonBarY = 32;
+	for (int buttonIndex = 0; buttonIndex < ARRAY_SIZE(editButtons); ++buttonIndex)
+	{
+		for (int tileAssociation = 0; tileAssociation < ARRAY_SIZE(tileSheet->associations);
+		     ++tileAssociation)
+		{
+			CharacterSheetCellAssociation* association = &tileSheet->associations[tileAssociation];
+			if (editButtons[buttonIndex] != association->key)
+				continue;
+
+			int textureX = association->column * c_tileSize;
+			int textureY = association->row * c_tileSize;
+			int screenX = startButtonBarX + (buttonIndex * (c_tileSize + buttonMarginX));
+			int screenY = buttonBarY;
+			SDL_Rect sourceRectangle = {textureX, textureY, c_tileSize, c_tileSize};
+			SDL_Rect destinationRectangle = {screenX, screenY, c_tileSize, c_tileSize};
+			SDL_RenderCopyEx(renderer, tileSheet->texture, &sourceRectangle, &destinationRectangle,
+			                 c_transformsToAngles[association->transform],
+			                 /*rotate about (default = center)*/ NULL,
+			                 c_transformsToSDLRenderFlips[association->transform]);
+			break;
+		}
+	}
+}
+
+//
 // Main
 //
+
 int main(int numArguments, char** arguments)
 {
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
 	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
 	SDL_Window* window = NULL;
-	if (!(sdlInitializeFor2d((&window), "Space Factory", 1920, 1080)))
+	int windowWidth = 1920;
+	int windowHeight = 1080;
+	if (!(sdlInitializeFor2d((&window), "Space Factory", windowWidth, windowHeight)))
 	{
 		fprintf(stderr, "Failed to initialize SDL\n");
 		return 1;
@@ -690,10 +736,10 @@ int main(int numArguments, char** arguments)
 	{
 		Object* testObject = &objects[i];
 		testObject->type = 'U';
-		testObject->body.position.x = (float)(rand() % 1000);
-		testObject->body.position.y = (float)(rand() % 1000);
-		//	testObject->body.velocity.x = (float)(rand() % 1000);
-		//	testObject->body.velocity.y = (float)(rand() % 1000);
+		testObject->body.position.x = (float)(rand() % windowWidth);
+		testObject->body.position.y = (float)(rand() % windowHeight);
+		testObject->body.velocity.x = (float)((rand() % 50) - 25);
+		testObject->body.velocity.y = (float)((rand() % 50) - 25);
 	}
 
 	// Main loop
@@ -770,7 +816,7 @@ int main(int numArguments, char** arguments)
 		if (playerPhys.velocity.x < -c_maxSpeed)
 			playerPhys.velocity.x = -c_maxSpeed;
 
-		UpdatePhysics(&playerPhys, deltaTime);
+		UpdatePhysics(&playerPhys, c_playerDrag, deltaTime);
 		// update objects
 		for (int i = 0; i < ARRAY_SIZE(objects); i++)
 		{
@@ -778,7 +824,7 @@ int main(int numArguments, char** arguments)
 			if (!currentObject->type)
 				continue;
 			if (!currentObject->inFactory)
-				UpdatePhysics(&currentObject->body, deltaTime);
+				UpdatePhysics(&currentObject->body, c_objectDrag, deltaTime);
 
 			// check for collisions by converting to tile space when in the proximity of the ship
 			float objShipLocalX =
@@ -872,6 +918,8 @@ int main(int numArguments, char** arguments)
 		                             renderer, &tileSheet,&camera);
 
 		renderObjects(renderer, &tileSheet,&camera);
+
+		renderEditUI(renderer, &tileSheet, windowWidth, windowHeight);
 
 		lastFrameNumTicks = SDL_GetPerformanceCounter();
 		SDL_RenderPresent(renderer);
