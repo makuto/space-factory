@@ -318,8 +318,8 @@ typedef struct Object
 {
 	char type;
 	bool inFactory = false;
-	unsigned char tilex = 0;
-	unsigned char tiley = 0;
+	unsigned char tileX = 0;
+	unsigned char tileY = 0;
 	RigidBody body;
 } Object;
 
@@ -412,6 +412,8 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 						Object* currentObject = &objects[i];
 						if (!currentObject->type)
 							continue;
+
+						currentObject->tileX -= 1;
 
 					}
 					break;
@@ -631,18 +633,18 @@ int main(int numArguments, char** arguments)
 			    objShipLocalX < -1 || objShipLocalX > (playerShipData.width + 1))
 				continue;
 
-			unsigned char shipTilex = (unsigned char)objShipLocalX;
-			unsigned char shipTiley = (unsigned char)objShipLocalY;
+			unsigned char shipTileX = (unsigned char)objShipLocalX;
+			unsigned char shipTileY = (unsigned char)objShipLocalY;
 
-			GridCell cell = GridCellAt((&playerShipData), shipTilex, shipTiley);
+			GridCell cell = GridCellAt((&playerShipData), shipTileX, shipTileY);
 			if (currentObject->inFactory)
 			{
 				// if the object has been captured into the ship factory, snap it to its tile
 				// location, and don't update any other physics
 				currentObject->body.position.x =
-				    (currentObject->tilex * c_tileSize) + playerPhys.position.x;
+				    (currentObject->tileX * c_tileSize) + playerPhys.position.x;
 				currentObject->body.position.y =
-				    (currentObject->tiley * c_tileSize) + playerPhys.position.y;
+				    (currentObject->tileY * c_tileSize) + playerPhys.position.y;
 				currentObject->body.velocity.x = 0;
 				currentObject->body.velocity.y = 0;
 				continue;
@@ -659,7 +661,7 @@ int main(int numArguments, char** arguments)
 					     (int)objShipLocalX == playerShipData.width - 2))
 						currentObject->body.velocity.x = playerPhys.velocity.x;
 
-					if (playerPhys.velocity.x < 0 && shipTilex == 0)
+					if (playerPhys.velocity.x < 0 && shipTileX == 0)
 						currentObject->body.velocity.x = playerPhys.velocity.x;
 				}
 				if (objShipLocalX > 0 && objShipLocalX <= playerShipData.width)
@@ -683,18 +685,18 @@ int main(int numArguments, char** arguments)
 					    currentKeyStates[SDL_SCANCODE_RIGHT])
 					{
 						fprintf(stderr, "Asteroid in ship Cell: (%d,%d), cell type: %c \n",
-						        shipTilex, shipTiley, cell.type);
+						        shipTileX, shipTileY, cell.type);
 					}
 					if (cell.type == 'c')
 					{
 						currentObject->body.position.x =
-						    (shipTilex * c_tileSize) + playerPhys.position.x;
+						    (shipTileX * c_tileSize) + playerPhys.position.x;
 						currentObject->body.position.y =
-						    (shipTiley * c_tileSize) + playerPhys.position.y;
+						    (shipTileY * c_tileSize) + playerPhys.position.y;
 						currentObject->body.velocity.x = 0;
 						currentObject->body.velocity.y = 0;
-						currentObject->tilex = shipTilex;
-						currentObject->tiley = shipTiley;
+						currentObject->tileX = shipTileX;
+						currentObject->tileY = shipTileY;
 						currentObject->inFactory = true;
 					}
 				}
