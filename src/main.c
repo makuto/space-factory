@@ -452,6 +452,23 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 					}
 					break;
 				}
+				case 'l':
+				case 'r':
+				case 'u':
+				case 'd':
+				{
+					for (int i = 0; i < ARRAY_SIZE(objects); ++i)
+					{
+						Object* currentObject = &objects[i];
+						if (!currentObject->type || currentObject->tileX != cellX ||
+						    currentObject->tileY != cellY)
+							continue;
+
+						cell->data.engineCell.fuel += 1.f;
+						currentObject->type = 0;
+					}
+					break;
+				}
 				default:
 					break;
 			}
