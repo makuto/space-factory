@@ -86,7 +86,7 @@ typedef struct GridSpace
 	GridCell* data;
 } GridSpace;
 
-#define GridCellAt(gridSpace, x, y) gridSpace->data[(y * gridSpace->width) + x]
+#define GridCellAt(gridSpace, x, y) (gridSpace->data[(y * gridSpace->width) + x])
 
 // Let's try to keep it static for now
 /* static GridSpace* createGridSpace(unsigned char width, unsigned char height) */
@@ -150,6 +150,7 @@ bool isEngineTile(unsigned char c)
 {
 	return c == 'u' || c == 'l' || c == 'r' || c == 'd';
 }
+
 static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int originY,
                                          SDL_Renderer* renderer, TileSheet* tileSheet,Camera* camera)
 {
@@ -713,8 +714,6 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 		{
 			memset(selectedCell, sizeof(GridCell), 0);
 			selectedCell->type = currentSelectedTileType;
-			selectedCell->data.engineCell.fuel = 0.f;
-			fprintf(stderr, "%f\n", selectedCell->data.engineCell.fuel);
 		}
 	}
 }
@@ -809,7 +808,7 @@ int main(int numArguments, char** arguments)
 	GridSpace playerShipData = {0};
 	playerShipData.width = 18;
 	playerShipData.height = 7;
-	GridCell playerShipCells[18 * 7];
+	GridCell playerShipCells[18 * 7] = {0};
 	playerShipData.data = playerShipCells;
 	GridSpace* playerShip = &playerShipData;
 	{
@@ -939,7 +938,10 @@ int main(int numArguments, char** arguments)
 			unsigned char shipTileX = (unsigned char)objShipLocalX;
 			unsigned char shipTileY = (unsigned char)objShipLocalY;
 
-			GridCell cell = GridCellAt((&playerShipData), shipTileX, shipTileY);
+			GridCell cell = {0};
+			if (objShipLocalX < playerShipData.width && objShipLocalX >= 0 &&
+			    objShipLocalY < playerShipData.height && objShipLocalY >= 0)
+				cell = GridCellAt((&playerShipData), shipTileX, shipTileY);
 			if (currentObject->inFactory)
 			{
 				// if the object has been captured into the ship factory, snap it to its tile
