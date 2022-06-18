@@ -550,6 +550,21 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 	}
 }
 
+
+//
+// Camera
+//
+struct Camera{
+	SDL_Rect viewport;
+	Vec2 position;
+};
+
+void updateCameraViewport(Camera * camera){
+	//center camera over its position
+	camera->viewport.x = camera->position.x - camera.viewport.width/2;
+	camera->viewport.y = camera->position.y - camera.viewport.height/2;
+}
+
 //
 // Main
 //
@@ -653,6 +668,7 @@ int main(int numArguments, char** arguments)
 		renderGridSpaceText(playerShip);
 	}
 	RigidBody playerPhys = SpawnPlayerPhys();
+	//snap the camera to the player postion
 
 	// Make some objects
 	for (int i = 0; i < 40; ++i)
