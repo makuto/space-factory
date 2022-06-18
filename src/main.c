@@ -584,8 +584,24 @@ void snapCameraToGrid(Camera* camera,Vec2* position, GridSpace* grid){
 // Ship editing
 //
 
+static GridCell* pickGridCellFromWorldSpace(Vec2 gridSpaceWorldPosition, GridSpace* searchGridSpace,
+                                            Vec2 pickWorldPosition)
+{
+	float gridSpaceX = (pickWorldPosition.x - gridSpaceWorldPosition.x) / c_tileSize;
+	float gridSpaceY = (pickWorldPosition.y - gridSpaceWorldPosition.y) / c_tileSize;
+	if (gridSpaceY < 0 || gridSpaceY >= searchGridSpace->height || gridSpaceX < 0 ||
+	    gridSpaceX >= searchGridSpace->width)
+		return NULL;
+
+	unsigned char cellX = (unsigned char)gridSpaceX;
+	unsigned char cellY = (unsigned char)gridSpaceY;
+
+	return &GridCellAt(searchGridSpace, cellX, cellY);
+}
+
 static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWidth,
-                     int windowHeight)
+                     int windowHeight, Vec2 cameraPosition, Vec2 gridSpaceWorldPosition,
+                     GridSpace* editGridSpace)
 {
 	int mouseX = 0;
 	int mouseY = 0;
@@ -595,7 +611,7 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 	int startButtonBarX =
 	    ((windowWidth / 2) - ((ARRAY_SIZE(editButtons) * (c_tileSize + buttonMarginX)) / 2));
 	int buttonBarY = 32;
-	static char currentSelectedTileType = 0;
+	static char currentSelectedTileType = editButtons[0];
 	for (int buttonIndex = 0; buttonIndex < ARRAY_SIZE(editButtons); ++buttonIndex)
 	{
 		for (int tileAssociation = 0; tileAssociation < ARRAY_SIZE(tileSheet->associations);
@@ -628,10 +644,12 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 				{
 					fprintf(stderr, "Selected %c\n", editButtons[buttonIndex]);
 					currentSelectedTileType = editButtons[buttonIndex];
+					SDL_SetRenderDrawColor(renderer, 251, 227, 205, 255);
 				}
+				else
+					SDL_SetRenderDrawColor(renderer, 255, 178, 109, 255);
 
 				// Indicate selection
-				SDL_SetRenderDrawColor(renderer, 255, 178, 109, 255);
 				SDL_RenderFillRect(renderer, &selectionRectangle);
 			}
 			else if (currentSelectedTileType == editButtons[buttonIndex])
@@ -645,6 +663,17 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 			                 /*rotate about (default = center)*/ NULL,
 			                 c_transformsToSDLRenderFlips[association->transform]);
 			break;
+		}
+	}
+
+	Vec2 pickWorldPosition = {mouseX + cameraPosition.x, mouseY + cameraPosition.y};
+	GridCell* selectedCell =
+	    pickGridCellFromWorldSpace(gridSpaceWorldPosition, editGridSpace, pickWorldPosition);
+	if (selectedCell)
+	{
+		if (mouseButtonState & SDL_BUTTON_LMASK)
+		{
+			selectedCell->type = currentSelectedTileType;
 		}
 	}
 }
@@ -937,7 +966,6 @@ int main(int numArguments, char** arguments)
 		}
 
 		doFactory(playerShip, deltaTime);
-		
 		snapCameraToGrid(&camera,&playerPhys.position,playerShip);
 
 		// Rendering
@@ -951,7 +979,9 @@ int main(int numArguments, char** arguments)
 
 		renderObjects(renderer, &tileSheet,&camera);
 
-		doEditUI(renderer, &tileSheet, windowWidth, windowHeight);
+		Vec2 cameraPosition = {(float)camera.x, (float)camera.y};
+		doEditUI(renderer, &tileSheet, windowWidth, windowHeight, cameraPosition,
+		         playerPhys.position, &playerShipData);
 
 		lastFrameNumTicks = SDL_GetPerformanceCounter();
 		SDL_RenderPresent(renderer);
