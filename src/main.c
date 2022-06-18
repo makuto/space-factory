@@ -709,6 +709,7 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 
 		if (mouseButtonState & SDL_BUTTON_LMASK)
 		{
+			memset(selectedCell, sizeof(*selectedCell), 0);
 			selectedCell->type = currentSelectedTileType;
 		}
 	}
