@@ -123,8 +123,8 @@ typedef struct TileSheet
 	SDL_Texture* texture;
 } TileSheet;
 
-bool isEngineTile(unsigned char * c){
-	return *c == 'u' || *c == 'l' || *c == 'r' || *c == 'd'; 
+bool isEngineTile(unsigned char c){
+	return c == 'u' || c == 'l' || c == 'r' || c == 'd'; 
 }
 static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int originY,
                                          SDL_Renderer* renderer, TileSheet* tileSheet)
@@ -146,7 +146,7 @@ static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int 
 				int textureY = association->row * c_tileSize;
 				int screenX = originX + (cellX * c_tileSize);
 				int screenY = originY + (cellY * c_tileSize);
-				if(isEngineTile((unsigned char *)&tileToFind) ){
+				if(isEngineTile(tileToFind) ){
 					//if this is an engine tile, and its firing, swap the off sprite for the on sprite, and draw the trail
 					if( GridCellAt(gridSpace,cellX,cellY).data.engineCell.firing){
 						textureX +=c_tileSize;
@@ -179,7 +179,7 @@ static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int 
 				                 c_transformsToSDLRenderFlips[association->transform]);
 
 			        //always draw the fuel display sprite for engines
-				if(isEngineTile((unsigned char *)&tileToFind) ){
+				if(isEngineTile(tileToFind) ){
 
 
 					const int c_meterShortLength = 5;
@@ -245,7 +245,7 @@ static void setGridSpaceFromString(GridSpace* gridSpace, const char* str)
 			continue;
 		assert(writeHead < gridSpaceEnd && "GridSpace doesn't have enough room to fit the string.");
 		writeHead->type = *c;
-		if(isEngineTile((unsigned char* )c)){
+		if(isEngineTile(*c)){
 			writeHead->data.engineCell.fuel = 1;
 			writeHead->data.engineCell.firing = false;
 		}
@@ -345,7 +345,7 @@ void renderObjects(SDL_Renderer* renderer, TileSheet* tileSheet)
 }
 
 int controlEnginesInDirection(GridSpace* gridSpace,char tileType, bool set){
-	assert(isEngineTile((unsigned char *)&tileType) && "tile passed to controlEnginesInDirection was not an engine tile");
+	assert(isEngineTile(tileType) && "tile passed to controlEnginesInDirection was not an engine tile");
 	int count =0;
 	for (int cellY = 0; cellY < gridSpace->height; ++cellY)
 	{
@@ -368,7 +368,7 @@ void updateEngineFuel(GridSpace* gridSpace,float deltaTime){
 		for (int cellX = 0; cellX < gridSpace->width; ++cellX)
 		{
 			GridCell * cell = &GridCellAt(gridSpace, cellX, cellY);
-			if(isEngineTile(&cell->type) && cell->data.engineCell.firing){
+			if(isEngineTile(cell->type) && cell->data.engineCell.firing){
 				cell->data.engineCell.fuel -= deltaTime;
 
 				if(cell->data.engineCell.fuel <= 0){
@@ -596,7 +596,7 @@ int main(int numArguments, char** arguments)
 			}
 
 			//otherwise check collisions with solid tiles, and update accordingly
-			if(cell.type=='#' || isEngineTile(&cell.type)){
+			if(cell.type=='#' || isEngineTile(cell.type)){
 				if(objShipLocaly>0 && objShipLocaly <=playerShipData.height ){
 					//detect collision with edges
 					if( playerPhys.velocity.x > 0 && ((int)objShipLocalx == playerShipData.width-1 || (int)objShipLocalx == playerShipData.width-2))
