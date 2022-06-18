@@ -396,6 +396,33 @@ void updateEngineFuel(GridSpace* gridSpace, float deltaTime)
 	}
 }
 
+void doFactory(GridSpace* gridSpace, float deltaTime)
+{
+	for (int cellY = 0; cellY < gridSpace->height; ++cellY)
+	{
+		for (int cellX = 0; cellX < gridSpace->width; ++cellX)
+		{
+			GridCell* cell = &GridCellAt(gridSpace, cellX, cellY);
+			switch (cell->type)
+			{
+				case '<':
+				{
+					for (int i = 0; i < ARRAY_SIZE(objects); ++i)
+					{
+						Object* currentObject = &objects[i];
+						if (!currentObject->type)
+							continue;
+
+					}
+					break;
+				}
+				default:
+					break;
+			}
+		}
+	}
+}
+
 //
 // Main
 //
@@ -594,17 +621,18 @@ int main(int numArguments, char** arguments)
 				continue;
 			if (!currentObject->inFactory)
 				UpdatePhysics(&currentObject->body, deltaTime);
+
 			// check for collisions by converting to tile space when in the proximity of the ship
-			float objShipLocalx =
+			float objShipLocalX =
 			    (currentObject->body.position.x - playerPhys.position.x) / c_tileSize;
-			float objShipLocaly =
+			float objShipLocalY =
 			    (currentObject->body.position.y - playerPhys.position.y) / c_tileSize;
-			if (objShipLocaly < -1 || objShipLocaly > (playerShipData.height + 1) ||
-			    objShipLocalx < -1 || objShipLocalx > (playerShipData.width + 1))
+			if (objShipLocalY < -1 || objShipLocalY > (playerShipData.height + 1) ||
+			    objShipLocalX < -1 || objShipLocalX > (playerShipData.width + 1))
 				continue;
 
-			unsigned char shipTilex = (unsigned char)objShipLocalx;
-			unsigned char shipTiley = (unsigned char)objShipLocaly;
+			unsigned char shipTilex = (unsigned char)objShipLocalX;
+			unsigned char shipTiley = (unsigned char)objShipLocalY;
 
 			GridCell cell = GridCellAt((&playerShipData), shipTilex, shipTiley);
 			if (currentObject->inFactory)
@@ -623,33 +651,33 @@ int main(int numArguments, char** arguments)
 			// otherwise check collisions with solid tiles, and update accordingly
 			if (cell.type == '#' || isEngineTile(cell.type))
 			{
-				if (objShipLocaly > 0 && objShipLocaly <= playerShipData.height)
+				if (objShipLocalY > 0 && objShipLocalY <= playerShipData.height)
 				{
 					// detect collision with edges
 					if (playerPhys.velocity.x > 0 &&
-					    ((int)objShipLocalx == playerShipData.width - 1 ||
-					     (int)objShipLocalx == playerShipData.width - 2))
+					    ((int)objShipLocalX == playerShipData.width - 1 ||
+					     (int)objShipLocalX == playerShipData.width - 2))
 						currentObject->body.velocity.x = playerPhys.velocity.x;
 
 					if (playerPhys.velocity.x < 0 && shipTilex == 0)
 						currentObject->body.velocity.x = playerPhys.velocity.x;
 				}
-				if (objShipLocalx > 0 && objShipLocalx <= playerShipData.width)
+				if (objShipLocalX > 0 && objShipLocalX <= playerShipData.width)
 				{
 					// detect collision with edges
 					if (playerPhys.velocity.y > 0 &&
-					    (int)objShipLocaly == playerShipData.height - 1)
+					    (int)objShipLocalY == playerShipData.height - 1)
 						currentObject->body.velocity.y = playerPhys.velocity.y;
-					if (playerPhys.velocity.y < 0 && (int)objShipLocaly == 0)
+					if (playerPhys.velocity.y < 0 && (int)objShipLocalY == 0)
 						currentObject->body.velocity.y = playerPhys.velocity.y;
 				}
 			}
 
 			// if the object makes it inside the via an inport let it inside, and mark it as inside
 			// the factory
-			if (objShipLocalx > 0 && objShipLocalx <= playerShipData.width)
+			if (objShipLocalX > 0 && objShipLocalX <= playerShipData.width)
 			{
-				if (objShipLocaly > 0 && objShipLocaly <= playerShipData.height)
+				if (objShipLocalY > 0 && objShipLocalY <= playerShipData.height)
 				{
 					if (currentKeyStates[SDL_SCANCODE_SPACE] ||
 					    currentKeyStates[SDL_SCANCODE_RIGHT])
