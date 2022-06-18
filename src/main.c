@@ -43,6 +43,8 @@ const char c_tileSize = 32;
 // Ship
 const float c_shipThrust = 300.f;
 const float c_maxSpeed = 1500.f;
+const float c_defaultStartFuel = 2.f;
+const float c_fuelConsumptionRate = 1.f;
 
 // Physics
 const float c_playerDrag = 0.1f;
@@ -276,7 +278,7 @@ static void setGridSpaceFromString(GridSpace* gridSpace, const char* str)
 		writeHead->type = *c;
 		if (isEngineTile(*c))
 		{
-			writeHead->data.engineCell.fuel = 1;
+			writeHead->data.engineCell.fuel = c_defaultStartFuel;
 			writeHead->data.engineCell.firing = false;
 		}
 
@@ -419,11 +421,11 @@ void updateEngineFuel(GridSpace* gridSpace, float deltaTime)
 			GridCell* cell = &GridCellAt(gridSpace, cellX, cellY);
 			if (isEngineTile(cell->type) && cell->data.engineCell.firing)
 			{
-				cell->data.engineCell.fuel -= deltaTime;
+				cell->data.engineCell.fuel -= c_fuelConsumptionRate * deltaTime;
 
-				if (cell->data.engineCell.fuel <= 0)
+				if (cell->data.engineCell.fuel <= 0.f)
 				{
-					cell->data.engineCell.fuel = 0;
+					cell->data.engineCell.fuel = 0.f;
 					cell->data.engineCell.firing = false;
 				}
 			}
@@ -709,8 +711,10 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 
 		if (mouseButtonState & SDL_BUTTON_LMASK)
 		{
-			memset(selectedCell, sizeof(*selectedCell), 0);
+			memset(selectedCell, sizeof(GridCell), 0);
 			selectedCell->type = currentSelectedTileType;
+			selectedCell->data.engineCell.fuel = 0.f;
+			fprintf(stderr, "%f\n", selectedCell->data.engineCell.fuel);
 		}
 	}
 }
@@ -1030,6 +1034,7 @@ int main(int numArguments, char** arguments)
 	{
 		fprintf(stderr, "Exiting. Reason: %s\n", exitReason);
 	}
+	SDL_DestroyRenderer(renderer);
 	sdlShutdown(window);
 
 	return 0;
