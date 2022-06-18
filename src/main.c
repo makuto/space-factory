@@ -496,7 +496,7 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 							continue;
 
 						// Move objects along which aren't unrefined the same speed as a conveyor
-						if (currentObject->type == 'u')
+						if (currentObject->type == 'U')
 							currentObject->transition += c_furnaceTransitionPerSecond * deltaTime;
 						else
 							currentObject->transition += c_conveyorTransitionPerSecond * deltaTime;
@@ -522,7 +522,7 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 								if (cellTo->type == c_deltas[directionIndex].conveyor &&
 								    rand() % 4 == 0)
 								{
-									if (currentObject->type == 'u')
+									if (currentObject->type == 'U')
 										currentObject->type = 'R';
 									currentObject->tileX += c_deltas[directionIndex].x;
 									currentObject->tileY += c_deltas[directionIndex].y;
