@@ -479,9 +479,11 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 							{
 								char directionCellX = cellX + c_deltas[directionIndex].x;
 								char directionCellY = cellY + c_deltas[directionIndex].y;
-								GridCell* currentCell = &GridCellAt(gridSpace, directionCellX, directionCellY);
+								GridCell* currentCell =
+								    &GridCellAt(gridSpace, directionCellX, directionCellY);
 								// Filter out any cells which aren't conveyors
-								// TODO: Check this cell against grid size (otherwise, we WILL crash)
+								// TODO: Check this cell against grid size (otherwise, we WILL
+								// crash)
 								if (currentCell->type != '<' && currentCell->type != 'V' &&
 								    currentCell->type != 'A' && currentCell->type != '>')
 									continue;
@@ -605,9 +607,9 @@ int main(int numArguments, char** arguments)
 
 	                           // Objects
 	                           // Unrefined fuel
-							   {'U', 0, 3, TextureTransform_None},
-							   // Refined fuel
-							   {'R', 1, 0, TextureTransform_None},
+	                           {'U', 0, 3, TextureTransform_None},
+	                           // Refined fuel
+	                           {'R', 1, 0, TextureTransform_None},
 	                       },
 	                       tileSheetTexture};
 
