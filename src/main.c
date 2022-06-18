@@ -39,7 +39,8 @@ const float c_deadLimit = 0.02f;  // the minimum velocity below which we are sta
 // Factory Cells
 //
 const int c_maxFuel = 5;
-struct EngineCell{
+struct EngineCell
+{
 	float fuel;
 	bool firing;
 };
@@ -48,13 +49,14 @@ struct EngineCell{
 // Grid
 //
 
-struct GridCell{
+struct GridCell
+{
 	unsigned char type;
-	union {
+	union
+	{
 		EngineCell engineCell;
 	} data;
 };
-
 
 typedef struct GridSpace
 {
@@ -123,8 +125,9 @@ typedef struct TileSheet
 	SDL_Texture* texture;
 } TileSheet;
 
-bool isEngineTile(unsigned char c){
-	return c == 'u' || c == 'l' || c == 'r' || c == 'd'; 
+bool isEngineTile(unsigned char c)
+{
+	return c == 'u' || c == 'l' || c == 'r' || c == 'd';
 }
 static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int originY,
                                          SDL_Renderer* renderer, TileSheet* tileSheet)
@@ -146,28 +149,32 @@ static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int 
 				int textureY = association->row * c_tileSize;
 				int screenX = originX + (cellX * c_tileSize);
 				int screenY = originY + (cellY * c_tileSize);
-				if(isEngineTile(tileToFind) ){
-					//if this is an engine tile, and its firing, swap the off sprite for the on sprite, and draw the trail
-					if( GridCellAt(gridSpace,cellX,cellY).data.engineCell.firing){
-						textureX +=c_tileSize;
-						SDL_Rect sourceRectangle = {textureX+c_tileSize, textureY, c_tileSize, c_tileSize};
-						//compute the trail sprite location
-						int trailX = screenX; 
-						int trailY = screenY; 
-						if(tileToFind=='u')
+				if (isEngineTile(tileToFind))
+				{
+					// if this is an engine tile, and its firing, swap the off sprite for the on
+					// sprite, and draw the trail
+					if (GridCellAt(gridSpace, cellX, cellY).data.engineCell.firing)
+					{
+						textureX += c_tileSize;
+						SDL_Rect sourceRectangle = {textureX + c_tileSize, textureY, c_tileSize,
+						                            c_tileSize};
+						// compute the trail sprite location
+						int trailX = screenX;
+						int trailY = screenY;
+						if (tileToFind == 'u')
 							trailY += c_tileSize;
-						if(tileToFind=='d')
+						if (tileToFind == 'd')
 							trailY -= c_tileSize;
-						if(tileToFind=='l')
+						if (tileToFind == 'l')
 							trailX -= c_tileSize;
-						if(tileToFind=='r')
+						if (tileToFind == 'r')
 							trailX += c_tileSize;
 						SDL_Rect destinationRectangle = {trailX, trailY, c_tileSize, c_tileSize};
 						SDL_RenderCopyEx(renderer, tileSheet->texture, &sourceRectangle,
-								 &destinationRectangle,
-								 c_transformsToAngles[association->transform],
-								 /*rotate about (default = center)*/ NULL,
-								 c_transformsToSDLRenderFlips[association->transform]);
+						                 &destinationRectangle,
+						                 c_transformsToAngles[association->transform],
+						                 /*rotate about (default = center)*/ NULL,
+						                 c_transformsToSDLRenderFlips[association->transform]);
 					}
 				}
 				SDL_Rect sourceRectangle = {textureX, textureY, c_tileSize, c_tileSize};
@@ -178,14 +185,13 @@ static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int 
 				                 /*rotate about (default = center)*/ NULL,
 				                 c_transformsToSDLRenderFlips[association->transform]);
 
-			        //always draw the fuel display sprite for engines
-				if(isEngineTile(tileToFind) ){
-
-
+				// always draw the fuel display sprite for engines
+				if (isEngineTile(tileToFind))
+				{
 					const int c_meterShortLength = 5;
 					const int c_meterLongLength = 30;
-				        int meterPosX =screenX;
-				        int meterPosY =screenY;
+					int meterPosX = screenX;
+					int meterPosY = screenY;
 					int meterWidth;
 					int meterHeight;
 					if (tileToFind == 'u')
@@ -195,13 +201,13 @@ static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int 
 					}
 					if (tileToFind == 'd')
 					{
-						meterPosY +=c_tileSize-5;
+						meterPosY += c_tileSize - 5;
 						meterWidth = c_meterLongLength;
 						meterHeight = c_meterShortLength;
 					}
 					if (tileToFind == 'l')
 					{
-						meterPosX = screenX+c_tileSize-5;
+						meterPosX = screenX + c_tileSize - 5;
 						meterWidth = c_meterShortLength;
 						meterHeight = c_meterLongLength;
 					}
@@ -210,30 +216,34 @@ static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int 
 						meterWidth = c_meterShortLength;
 						meterHeight = c_meterLongLength;
 					}
-						
-					SDL_Rect fuelMeterRect = {meterPosX,meterPosY,meterWidth+2,meterHeight+2};
-					SDL_SetRenderDrawColor(renderer,255,255,255,255);
-					SDL_RenderDrawRect(renderer,&fuelMeterRect);
-					float fuelPercentage = (GridCellAt(gridSpace,cellX,cellY).data.engineCell.fuel)/c_maxFuel;
-					if(meterWidth>meterHeight){
-						meterWidth *= fuelPercentage; 
-					}else{
-						meterHeight *= fuelPercentage; 
+
+					SDL_Rect fuelMeterRect = {meterPosX, meterPosY, meterWidth + 2,
+					                          meterHeight + 2};
+					SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+					SDL_RenderDrawRect(renderer, &fuelMeterRect);
+					float fuelPercentage =
+					    (GridCellAt(gridSpace, cellX, cellY).data.engineCell.fuel) / c_maxFuel;
+					if (meterWidth > meterHeight)
+					{
+						meterWidth *= fuelPercentage;
+					}
+					else
+					{
+						meterHeight *= fuelPercentage;
 					}
 
-					SDL_Rect fuelRect = {meterPosX+1,meterPosY+1,meterWidth,meterHeight};
-					SDL_SetRenderDrawColor(renderer,0,255,0,255);
-					SDL_RenderFillRect(renderer,&fuelRect);
+					SDL_Rect fuelRect = {meterPosX + 1, meterPosY + 1, meterWidth, meterHeight};
+					SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+					SDL_RenderFillRect(renderer, &fuelRect);
 
-					SDL_SetRenderDrawColor(renderer,0,0,0,0);
+					SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 				}
-					
+
 				break;
 			}
 		}
 	}
 }
-
 
 static void setGridSpaceFromString(GridSpace* gridSpace, const char* str)
 {
@@ -245,11 +255,12 @@ static void setGridSpaceFromString(GridSpace* gridSpace, const char* str)
 			continue;
 		assert(writeHead < gridSpaceEnd && "GridSpace doesn't have enough room to fit the string.");
 		writeHead->type = *c;
-		if(isEngineTile(*c)){
+		if (isEngineTile(*c))
+		{
 			writeHead->data.engineCell.fuel = 1;
 			writeHead->data.engineCell.firing = false;
 		}
-		
+
 		++writeHead;
 	}
 }
@@ -344,43 +355,46 @@ void renderObjects(SDL_Renderer* renderer, TileSheet* tileSheet)
 	}
 }
 
-int controlEnginesInDirection(GridSpace* gridSpace,char tileType, bool set){
-	assert(isEngineTile(tileType) && "tile passed to controlEnginesInDirection was not an engine tile");
-	int count =0;
+int controlEnginesInDirection(GridSpace* gridSpace, char tileType, bool set)
+{
+	assert(isEngineTile(tileType) &&
+	       "tile passed to controlEnginesInDirection was not an engine tile");
+	int count = 0;
 	for (int cellY = 0; cellY < gridSpace->height; ++cellY)
 	{
 		for (int cellX = 0; cellX < gridSpace->width; ++cellX)
 		{
-			GridCell * cell = &GridCellAt(gridSpace, cellX, cellY);
-			if(tileType == cell->type && cell->data.engineCell.fuel>0){
+			GridCell* cell = &GridCellAt(gridSpace, cellX, cellY);
+			if (tileType == cell->type && cell->data.engineCell.fuel > 0)
+			{
 				cell->data.engineCell.firing = set;
 				count++;
 			}
-			
 		}
 	}
 	return count;
 }
 
-void updateEngineFuel(GridSpace* gridSpace,float deltaTime){
+void updateEngineFuel(GridSpace* gridSpace, float deltaTime)
+{
 	for (int cellY = 0; cellY < gridSpace->height; ++cellY)
 	{
 		for (int cellX = 0; cellX < gridSpace->width; ++cellX)
 		{
-			GridCell * cell = &GridCellAt(gridSpace, cellX, cellY);
-			if(isEngineTile(cell->type) && cell->data.engineCell.firing){
+			GridCell* cell = &GridCellAt(gridSpace, cellX, cellY);
+			if (isEngineTile(cell->type) && cell->data.engineCell.firing)
+			{
 				cell->data.engineCell.fuel -= deltaTime;
 
-				if(cell->data.engineCell.fuel <= 0){
+				if (cell->data.engineCell.fuel <= 0)
+				{
 					cell->data.engineCell.fuel = 0;
 					cell->data.engineCell.firing = false;
 				}
 			}
-			
 		}
 	}
 }
-
 
 //
 // Main
@@ -493,8 +507,8 @@ int main(int numArguments, char** arguments)
 		testObject->type = 'U';
 		testObject->body.position.x = (float)(rand() % 1000);
 		testObject->body.position.y = (float)(rand() % 1000);
-	//	testObject->body.velocity.x = (float)(rand() % 1000);
-	//	testObject->body.velocity.y = (float)(rand() % 1000);
+		//	testObject->body.velocity.x = (float)(rand() % 1000);
+		//	testObject->body.velocity.y = (float)(rand() % 1000);
 	}
 
 	// Main loop
@@ -521,124 +535,142 @@ int main(int numArguments, char** arguments)
 			exitReason = "Escape pressed";
 		}
 
-		float shipThrust = c_shipThrust*deltaTime;
+		float shipThrust = c_shipThrust * deltaTime;
 
 		if (currentKeyStates[SDL_SCANCODE_W] || currentKeyStates[SDL_SCANCODE_UP])
 		{
-			playerPhys.velocity.y += -shipThrust*controlEnginesInDirection(&playerShipData,'u',true);
+			playerPhys.velocity.y +=
+			    -shipThrust * controlEnginesInDirection(&playerShipData, 'u', true);
 		}
 		else
 		{
-			controlEnginesInDirection(&playerShipData,'u',false);
-
+			controlEnginesInDirection(&playerShipData, 'u', false);
 		}
 		if (currentKeyStates[SDL_SCANCODE_S] || currentKeyStates[SDL_SCANCODE_DOWN])
 		{
-			playerPhys.velocity.y +=  shipThrust*controlEnginesInDirection(&playerShipData,'d',true);
+			playerPhys.velocity.y +=
+			    shipThrust * controlEnginesInDirection(&playerShipData, 'd', true);
 		}
 		else
 		{
-			controlEnginesInDirection(&playerShipData,'d',false);
-
+			controlEnginesInDirection(&playerShipData, 'd', false);
 		}
 		if (currentKeyStates[SDL_SCANCODE_A] || currentKeyStates[SDL_SCANCODE_LEFT])
 		{
-			playerPhys.velocity.x += -shipThrust*controlEnginesInDirection(&playerShipData,'r',true);
+			playerPhys.velocity.x +=
+			    -shipThrust * controlEnginesInDirection(&playerShipData, 'r', true);
 		}
 		else
 		{
-			controlEnginesInDirection(&playerShipData,'r',false);
-
+			controlEnginesInDirection(&playerShipData, 'r', false);
 		}
 		if (currentKeyStates[SDL_SCANCODE_D] || currentKeyStates[SDL_SCANCODE_RIGHT])
 		{
-			playerPhys.velocity.x += shipThrust*controlEnginesInDirection(&playerShipData,'l',true);
+			playerPhys.velocity.x +=
+			    shipThrust * controlEnginesInDirection(&playerShipData, 'l', true);
 		}
 		else
 		{
-			controlEnginesInDirection(&playerShipData,'l',false);
-
+			controlEnginesInDirection(&playerShipData, 'l', false);
 		}
 
-		updateEngineFuel(&playerShipData,deltaTime);
+		updateEngineFuel(&playerShipData, deltaTime);
 
-		if (playerPhys.velocity.y > c_maxSpeed) playerPhys.velocity.y = c_maxSpeed;
-		if (playerPhys.velocity.y < -c_maxSpeed) playerPhys.velocity.y = -c_maxSpeed;
-		if (playerPhys.velocity.x > c_maxSpeed) playerPhys.velocity.x = c_maxSpeed;
-		if (playerPhys.velocity.x < -c_maxSpeed) playerPhys.velocity.x = -c_maxSpeed;
+		if (playerPhys.velocity.y > c_maxSpeed)
+			playerPhys.velocity.y = c_maxSpeed;
+		if (playerPhys.velocity.y < -c_maxSpeed)
+			playerPhys.velocity.y = -c_maxSpeed;
+		if (playerPhys.velocity.x > c_maxSpeed)
+			playerPhys.velocity.x = c_maxSpeed;
+		if (playerPhys.velocity.x < -c_maxSpeed)
+			playerPhys.velocity.x = -c_maxSpeed;
 
 		UpdatePhysics(&playerPhys, deltaTime);
-		//update objects
-		for(int i = 0; i < ARRAY_SIZE(objects); i++){
+		// update objects
+		for (int i = 0; i < ARRAY_SIZE(objects); i++)
+		{
 			Object* currentObject = &objects[i];
-			if(!currentObject->type )
+			if (!currentObject->type)
 				continue;
-			if(!currentObject->inFactory)
-				UpdatePhysics(&currentObject->body,deltaTime);
-			//check for collisions by converting to tile space when in the proximity of the ship
-			float objShipLocalx =  (currentObject->body.position.x - playerPhys.position.x)/c_tileSize;
-			float objShipLocaly = (currentObject->body.position.y - playerPhys.position.y)/c_tileSize;
-			if(objShipLocaly <-1 || objShipLocaly > (playerShipData.height+1) || objShipLocalx < -1 || objShipLocalx > (playerShipData.width+1))
+			if (!currentObject->inFactory)
+				UpdatePhysics(&currentObject->body, deltaTime);
+			// check for collisions by converting to tile space when in the proximity of the ship
+			float objShipLocalx =
+			    (currentObject->body.position.x - playerPhys.position.x) / c_tileSize;
+			float objShipLocaly =
+			    (currentObject->body.position.y - playerPhys.position.y) / c_tileSize;
+			if (objShipLocaly < -1 || objShipLocaly > (playerShipData.height + 1) ||
+			    objShipLocalx < -1 || objShipLocalx > (playerShipData.width + 1))
 				continue;
-			
-		        unsigned char shipTilex = (unsigned char) objShipLocalx;
-		        unsigned char shipTiley = (unsigned char) objShipLocaly;
-			
-			
-			GridCell cell = GridCellAt((&playerShipData),shipTilex,shipTiley);
-			if(currentObject->inFactory){
-				//if the object has been captured into the ship factory, snap it to its tile location, and don't update any other physics 
-				currentObject->body.position.x = (currentObject->tilex*c_tileSize) + playerPhys.position.x;
-				currentObject->body.position.y = (currentObject->tiley*c_tileSize) + playerPhys.position.y;
-				currentObject->body.velocity.x = 0; 
-				currentObject->body.velocity.y = 0; 
+
+			unsigned char shipTilex = (unsigned char)objShipLocalx;
+			unsigned char shipTiley = (unsigned char)objShipLocaly;
+
+			GridCell cell = GridCellAt((&playerShipData), shipTilex, shipTiley);
+			if (currentObject->inFactory)
+			{
+				// if the object has been captured into the ship factory, snap it to its tile
+				// location, and don't update any other physics
+				currentObject->body.position.x =
+				    (currentObject->tilex * c_tileSize) + playerPhys.position.x;
+				currentObject->body.position.y =
+				    (currentObject->tiley * c_tileSize) + playerPhys.position.y;
+				currentObject->body.velocity.x = 0;
+				currentObject->body.velocity.y = 0;
 				continue;
 			}
 
-			//otherwise check collisions with solid tiles, and update accordingly
-			if(cell.type=='#' || isEngineTile(cell.type)){
-				if(objShipLocaly>0 && objShipLocaly <=playerShipData.height ){
-					//detect collision with edges
-					if( playerPhys.velocity.x > 0 && ((int)objShipLocalx == playerShipData.width-1 || (int)objShipLocalx == playerShipData.width-2))
-							currentObject->body.velocity.x = playerPhys.velocity.x;
+			// otherwise check collisions with solid tiles, and update accordingly
+			if (cell.type == '#' || isEngineTile(cell.type))
+			{
+				if (objShipLocaly > 0 && objShipLocaly <= playerShipData.height)
+				{
+					// detect collision with edges
+					if (playerPhys.velocity.x > 0 &&
+					    ((int)objShipLocalx == playerShipData.width - 1 ||
+					     (int)objShipLocalx == playerShipData.width - 2))
+						currentObject->body.velocity.x = playerPhys.velocity.x;
 
 					if (playerPhys.velocity.x < 0 && shipTilex == 0)
-							currentObject->body.velocity.x = playerPhys.velocity.x;
-					
-
+						currentObject->body.velocity.x = playerPhys.velocity.x;
 				}
-				if(objShipLocalx>0 && objShipLocalx <=playerShipData.width ){
-					//detect collision with edges
-					if (playerPhys.velocity.y >0 && (int)objShipLocaly == playerShipData.height-1)
-							currentObject->body.velocity.y = playerPhys.velocity.y;
+				if (objShipLocalx > 0 && objShipLocalx <= playerShipData.width)
+				{
+					// detect collision with edges
+					if (playerPhys.velocity.y > 0 &&
+					    (int)objShipLocaly == playerShipData.height - 1)
+						currentObject->body.velocity.y = playerPhys.velocity.y;
 					if (playerPhys.velocity.y < 0 && (int)objShipLocaly == 0)
-							currentObject->body.velocity.y = playerPhys.velocity.y;
+						currentObject->body.velocity.y = playerPhys.velocity.y;
 				}
 			}
-			
-				
 
-			//if the object makes it inside the via an inport let it inside, and mark it as inside the factory	
-			if(objShipLocalx>0 && objShipLocalx <= playerShipData.width ){
-				if(objShipLocaly>0 && objShipLocaly <= playerShipData.height ){
-					if (currentKeyStates[SDL_SCANCODE_SPACE] || currentKeyStates[SDL_SCANCODE_RIGHT])
+			// if the object makes it inside the via an inport let it inside, and mark it as inside
+			// the factory
+			if (objShipLocalx > 0 && objShipLocalx <= playerShipData.width)
+			{
+				if (objShipLocaly > 0 && objShipLocaly <= playerShipData.height)
+				{
+					if (currentKeyStates[SDL_SCANCODE_SPACE] ||
+					    currentKeyStates[SDL_SCANCODE_RIGHT])
 					{
-				       		fprintf(stderr,"Asteroid in ship Cell: (%d,%d), cell type: %c \n",shipTilex, shipTiley,cell.type);
+						fprintf(stderr, "Asteroid in ship Cell: (%d,%d), cell type: %c \n",
+						        shipTilex, shipTiley, cell.type);
 					}
-					if(cell.type == 'c'){
-						currentObject->body.position.x = (shipTilex*c_tileSize) + playerPhys.position.x;
-						currentObject->body.position.y = (shipTiley*c_tileSize) + playerPhys.position.y;
-						currentObject->body.velocity.x = 0; 
-						currentObject->body.velocity.y = 0; 
+					if (cell.type == 'c')
+					{
+						currentObject->body.position.x =
+						    (shipTilex * c_tileSize) + playerPhys.position.x;
+						currentObject->body.position.y =
+						    (shipTiley * c_tileSize) + playerPhys.position.y;
+						currentObject->body.velocity.x = 0;
+						currentObject->body.velocity.y = 0;
 						currentObject->tilex = shipTilex;
 						currentObject->tiley = shipTiley;
 						currentObject->inFactory = true;
 					}
-
 				}
 			}
-
-		    
 		}
 
 		SDL_RenderClear(renderer);
