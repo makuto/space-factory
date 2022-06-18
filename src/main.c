@@ -474,6 +474,7 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 						currentObject->transition += 100 * deltaTime;
 						if (currentObject->transition > 128)
 						{
+							// TODO: Make generic FindAwayConveyor function
 							for (int directionIndex = 0; directionIndex < ARRAY_SIZE(c_deltas);
 							     ++directionIndex)
 							{
