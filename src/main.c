@@ -35,10 +35,15 @@ const float c_maxSpeed = 1500.f;
 const float c_drag = .1f;
 const float c_deadLimit = 0.02f;  // the minimum velocity below which we are stationary
 
+// Factory
+const int c_maxFuel = 5;
+const unsigned char c_transitionThreshold = 128;
+const unsigned char c_conveyorTransitionPerSecond = 250;
+const unsigned char c_furnaceTransitionPerSecond = 100;
+
 //
 // Factory Cells
 //
-const int c_maxFuel = 5;
 struct EngineCell
 {
 	float fuel;
@@ -463,8 +468,8 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 							continue;
 
 						// TODO This isn't very safe because if <1, the object will never transition
-						currentObject->transition += 128 * deltaTime;
-						if (currentObject->transition > 128)
+						currentObject->transition += c_conveyorTransitionPerSecond * deltaTime;
+						if (currentObject->transition > c_transitionThreshold)
 						{
 							for (int transitionIndex = 0;
 							     transitionIndex < ARRAY_SIZE(c_transitions); ++transitionIndex)
@@ -490,8 +495,8 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 							continue;
 
 						// TODO This isn't very safe because if <1, the object will never transition
-						currentObject->transition += 100 * deltaTime;
-						if (currentObject->transition > 128)
+						currentObject->transition += c_furnaceTransitionPerSecond * deltaTime;
+						if (currentObject->transition > c_transitionThreshold)
 						{
 							// TODO: Make generic FindAwayConveyor function
 							for (int directionIndex = 0; directionIndex < ARRAY_SIZE(c_deltas);
