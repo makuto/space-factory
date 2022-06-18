@@ -19,7 +19,7 @@ extern unsigned char _binary_assets_TileSheet_bmp_end;
 static unsigned char* startTilesheetBmp = (&_binary_assets_TileSheet_bmp_start);
 static unsigned char* endTilesheetBmp = (&_binary_assets_TileSheet_bmp_end);
 
-//Math
+// Math
 struct Vec2
 {
 	float x;
@@ -152,7 +152,8 @@ bool isEngineTile(unsigned char c)
 }
 
 static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int originY,
-                                         SDL_Renderer* renderer, TileSheet* tileSheet,Camera* camera)
+                                         SDL_Renderer* renderer, TileSheet* tileSheet,
+                                         Camera* camera)
 {
 	for (int cellY = 0; cellY < gridSpace->height; ++cellY)
 	{
@@ -287,7 +288,7 @@ static void setGridSpaceFromString(GridSpace* gridSpace, const char* str)
 	}
 }
 
-static void renderStarField(SDL_Renderer* renderer,Camera* camera)
+static void renderStarField(SDL_Renderer* renderer, Camera* camera)
 {
 	static SDL_FRect stars[128] = {0};
 	static bool starsInitialized = false;
@@ -295,8 +296,8 @@ static void renderStarField(SDL_Renderer* renderer,Camera* camera)
 	{
 		for (int i = 0; i < ARRAY_SIZE(stars); ++i)
 		{
-			stars[i].x = rand() % 1920 ;
-			stars[i].y = rand() % 1080 ;
+			stars[i].x = rand() % 1920;
+			stars[i].y = rand() % 1080;
 			stars[i].w = rand() % 5 + 1;
 			stars[i].h = rand() % 5 + 1;
 		}
@@ -309,7 +310,6 @@ static void renderStarField(SDL_Renderer* renderer,Camera* camera)
 //
 // Physics
 //
-
 
 struct RigidBody
 {
@@ -571,16 +571,98 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 	}
 }
 
+void snapCameraToGrid(Camera* camera, Vec2* position, GridSpace* grid)
+{
+	// center camera over its position
+	// compute grid center
+	int x = position->x + (grid->width * c_tileSize) / 2;
+	int y = position->y + (grid->height * c_tileSize) / 2;
 
-void snapCameraToGrid(Camera* camera,Vec2* position, GridSpace* grid){
-	//center camera over its position
-	//compute grid center
-	int x = position->x + (grid->width * c_tileSize)/2;
-	int y = position->y + (grid->height * c_tileSize)/2;
-		
+	camera->x = x - camera->w / 2;
+	camera->y = y - camera->h / 2;
+}
 
-	camera->x = x - camera->w/2;
-	camera->y = y - camera->h/2;
+void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float deltaTime)
+{
+	for (int i = 0; i < ARRAY_SIZE(objects); i++)
+	{
+		Object* currentObject = &objects[i];
+		if (!currentObject->type)
+			continue;
+		if (!currentObject->inFactory)
+			UpdatePhysics(&currentObject->body, c_objectDrag, deltaTime);
+		else
+		{
+			// if the object has been captured into the ship factory, snap it to its tile
+			// location, and don't update any other physics
+			currentObject->body.position.x =
+			    (currentObject->tileX * c_tileSize) + playerPhys->position.x;
+			currentObject->body.position.y =
+			    (currentObject->tileY * c_tileSize) + playerPhys->position.y;
+			currentObject->body.velocity.x = 0;
+			currentObject->body.velocity.y = 0;
+			continue;
+		}
+
+		// check for collisions by converting to tile space when in the proximity of the ship
+		float objShipLocalX = (currentObject->body.position.x - playerPhys->position.x) / c_tileSize;
+		float objShipLocalY = (currentObject->body.position.y - playerPhys->position.y) / c_tileSize;
+		if (objShipLocalY < -1 || objShipLocalY > (playerShipData->height + 1) ||
+		    objShipLocalX < -1 || objShipLocalX > (playerShipData->width + 1))
+			continue;
+
+		unsigned char shipTileX = (unsigned char)objShipLocalX;
+		unsigned char shipTileY = (unsigned char)objShipLocalY;
+
+		GridCell cell = {0};
+		if (objShipLocalX < playerShipData->width && objShipLocalX >= 0 &&
+		    objShipLocalY < playerShipData->height && objShipLocalY >= 0)
+			cell = GridCellAt(playerShipData, shipTileX, shipTileY);
+
+		// otherwise check collisions with solid tiles, and update accordingly
+		if (cell.type == '#' || isEngineTile(cell.type))
+		{
+			if (objShipLocalY > 0 && objShipLocalY <= playerShipData->height)
+			{
+				// detect collision with edges
+				if (playerPhys->velocity.x > 0 && ((int)objShipLocalX == playerShipData->width - 1 ||
+				                                  (int)objShipLocalX == playerShipData->width - 2))
+					currentObject->body.velocity.x = playerPhys->velocity.x;
+
+				if (playerPhys->velocity.x < 0 && shipTileX == 0)
+					currentObject->body.velocity.x = playerPhys->velocity.x;
+			}
+			if (objShipLocalX > 0 && objShipLocalX <= playerShipData->width)
+			{
+				// detect collision with edges
+				if (playerPhys->velocity.y > 0 && (int)objShipLocalY == playerShipData->height - 1)
+					currentObject->body.velocity.y = playerPhys->velocity.y;
+				if (playerPhys->velocity.y < 0 && (int)objShipLocalY == 0)
+					currentObject->body.velocity.y = playerPhys->velocity.y;
+			}
+		}
+
+		// if the object makes it inside the via an inport let it inside, and mark it as inside
+		// the factory
+		if (objShipLocalX > 0 && objShipLocalX <= playerShipData->width)
+		{
+			if (objShipLocalY > 0 && objShipLocalY <= playerShipData->height)
+			{
+				if (cell.type == 'c')
+				{
+					currentObject->body.position.x =
+					    (shipTileX * c_tileSize) + playerPhys->position.x;
+					currentObject->body.position.y =
+					    (shipTileY * c_tileSize) + playerPhys->position.y;
+					currentObject->body.velocity.x = 0;
+					currentObject->body.velocity.y = 0;
+					currentObject->tileX = shipTileX;
+					currentObject->tileY = shipTileY;
+					currentObject->inFactory = true;
+				}
+			}
+		}
+	}
 }
 
 //
@@ -696,8 +778,10 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 
 			int textureX = association->column * c_tileSize;
 			int textureY = association->row * c_tileSize;
-			int screenX = (gridSpaceWorldPosition.x - cameraPosition.x) + (selectedCellX * c_tileSize);
-			int screenY = (gridSpaceWorldPosition.y - cameraPosition.y) + (selectedCellY * c_tileSize);
+			int screenX =
+			    (gridSpaceWorldPosition.x - cameraPosition.x) + (selectedCellX * c_tileSize);
+			int screenY =
+			    (gridSpaceWorldPosition.y - cameraPosition.y) + (selectedCellY * c_tileSize);
 			SDL_Rect sourceRectangle = {textureX, textureY, c_tileSize, c_tileSize};
 			SDL_Rect destinationRectangle = {screenX, screenY, c_tileSize, c_tileSize};
 
@@ -824,7 +908,7 @@ int main(int numArguments, char** arguments)
 		renderGridSpaceText(playerShip);
 	}
 	RigidBody playerPhys = SpawnPlayerPhys();
-	//snap the camera to the player postion
+	// snap the camera to the player postion
 	Camera camera;
 	camera.x = playerPhys.position.x;
 	camera.y = playerPhys.position.y;
@@ -917,104 +1001,21 @@ int main(int numArguments, char** arguments)
 			playerPhys.velocity.x = -c_maxSpeed;
 
 		UpdatePhysics(&playerPhys, c_playerDrag, deltaTime);
-		// update objects
-		for (int i = 0; i < ARRAY_SIZE(objects); i++)
-		{
-			Object* currentObject = &objects[i];
-			if (!currentObject->type)
-				continue;
-			if (!currentObject->inFactory)
-				UpdatePhysics(&currentObject->body, c_objectDrag, deltaTime);
-			else
-			{
-				// if the object has been captured into the ship factory, snap it to its tile
-				// location, and don't update any other physics
-				currentObject->body.position.x =
-				    (currentObject->tileX * c_tileSize) + playerPhys.position.x;
-				currentObject->body.position.y =
-				    (currentObject->tileY * c_tileSize) + playerPhys.position.y;
-				currentObject->body.velocity.x = 0;
-				currentObject->body.velocity.y = 0;
-				continue;
-			}
-
-			// check for collisions by converting to tile space when in the proximity of the ship
-			float objShipLocalX =
-			    (currentObject->body.position.x - playerPhys.position.x) / c_tileSize;
-			float objShipLocalY =
-			    (currentObject->body.position.y - playerPhys.position.y) / c_tileSize;
-			if (objShipLocalY < -1 || objShipLocalY > (playerShipData.height + 1) ||
-			    objShipLocalX < -1 || objShipLocalX > (playerShipData.width + 1))
-				continue;
-
-			unsigned char shipTileX = (unsigned char)objShipLocalX;
-			unsigned char shipTileY = (unsigned char)objShipLocalY;
-
-			GridCell cell = {0};
-			if (objShipLocalX < playerShipData.width && objShipLocalX >= 0 &&
-			    objShipLocalY < playerShipData.height && objShipLocalY >= 0)
-				cell = GridCellAt((&playerShipData), shipTileX, shipTileY);
-
-			// otherwise check collisions with solid tiles, and update accordingly
-			if (cell.type == '#' || isEngineTile(cell.type))
-			{
-				if (objShipLocalY > 0 && objShipLocalY <= playerShipData.height)
-				{
-					// detect collision with edges
-					if (playerPhys.velocity.x > 0 &&
-					    ((int)objShipLocalX == playerShipData.width - 1 ||
-					     (int)objShipLocalX == playerShipData.width - 2))
-						currentObject->body.velocity.x = playerPhys.velocity.x;
-
-					if (playerPhys.velocity.x < 0 && shipTileX == 0)
-						currentObject->body.velocity.x = playerPhys.velocity.x;
-				}
-				if (objShipLocalX > 0 && objShipLocalX <= playerShipData.width)
-				{
-					// detect collision with edges
-					if (playerPhys.velocity.y > 0 &&
-					    (int)objShipLocalY == playerShipData.height - 1)
-						currentObject->body.velocity.y = playerPhys.velocity.y;
-					if (playerPhys.velocity.y < 0 && (int)objShipLocalY == 0)
-						currentObject->body.velocity.y = playerPhys.velocity.y;
-				}
-			}
-
-			// if the object makes it inside the via an inport let it inside, and mark it as inside
-			// the factory
-			if (objShipLocalX > 0 && objShipLocalX <= playerShipData.width)
-			{
-				if (objShipLocalY > 0 && objShipLocalY <= playerShipData.height)
-				{
-					if (cell.type == 'c')
-					{
-						currentObject->body.position.x =
-						    (shipTileX * c_tileSize) + playerPhys.position.x;
-						currentObject->body.position.y =
-						    (shipTileY * c_tileSize) + playerPhys.position.y;
-						currentObject->body.velocity.x = 0;
-						currentObject->body.velocity.y = 0;
-						currentObject->tileX = shipTileX;
-						currentObject->tileY = shipTileY;
-						currentObject->inFactory = true;
-					}
-				}
-			}
-		}
+		updateObjects(&playerPhys, &playerShipData, deltaTime);
 
 		doFactory(playerShip, deltaTime);
-		snapCameraToGrid(&camera,&playerPhys.position,playerShip);
+		snapCameraToGrid(&camera, &playerPhys.position, playerShip);
 
 		// Rendering
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		SDL_RenderClear(renderer);
 
-		renderStarField(renderer,&camera);
+		renderStarField(renderer, &camera);
 
 		renderGridSpaceFromTileSheet(playerShip, playerPhys.position.x, playerPhys.position.y,
-		                             renderer, &tileSheet,&camera);
+		                             renderer, &tileSheet, &camera);
 
-		renderObjects(renderer, &tileSheet,&camera);
+		renderObjects(renderer, &tileSheet, &camera);
 
 		Vec2 cameraPosition = {(float)camera.x, (float)camera.y};
 		doEditUI(renderer, &tileSheet, windowWidth, windowHeight, cameraPosition,
