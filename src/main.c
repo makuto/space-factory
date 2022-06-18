@@ -405,16 +405,17 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 			GridCell* cell = &GridCellAt(gridSpace, cellX, cellY);
 			switch (cell->type)
 			{
+				case 'c':
 				case '<':
 				{
 					for (int i = 0; i < ARRAY_SIZE(objects); ++i)
 					{
 						Object* currentObject = &objects[i];
-						if (!currentObject->type)
+						if (!currentObject->type || currentObject->tileX != cellX ||
+						    currentObject->tileY != cellY)
 							continue;
 
 						currentObject->tileX -= 1;
-
 					}
 					break;
 				}
@@ -430,8 +431,6 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 //
 int main(int numArguments, char** arguments)
 {
-	fprintf(stderr, "Hello, world!\n");
-
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
 	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
@@ -684,8 +683,8 @@ int main(int numArguments, char** arguments)
 					if (currentKeyStates[SDL_SCANCODE_SPACE] ||
 					    currentKeyStates[SDL_SCANCODE_RIGHT])
 					{
-						fprintf(stderr, "Asteroid in ship Cell: (%d,%d), cell type: %c \n",
-						        shipTileX, shipTileY, cell.type);
+						/* fprintf(stderr, "Asteroid in ship Cell: (%d,%d), cell type: %c \n", */
+						/* shipTileX, shipTileY, cell.type); */
 					}
 					if (cell.type == 'c')
 					{
@@ -703,6 +702,9 @@ int main(int numArguments, char** arguments)
 			}
 		}
 
+		doFactory(playerShip, deltaTime);
+
+		// Rendering
 		SDL_RenderClear(renderer);
 
 		renderGridSpaceFromTileSheet(playerShip, playerPhys.position.x, playerPhys.position.y,
