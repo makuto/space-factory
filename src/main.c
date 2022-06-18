@@ -317,9 +317,11 @@ RigidBody SpawnPlayerPhys()
 typedef struct Object
 {
 	char type;
-	bool inFactory = false;
-	unsigned char tileX = 0;
-	unsigned char tileY = 0;
+	bool inFactory;
+	unsigned char tileX;
+	unsigned char tileY;
+	// Once this reaches a certain threshold, transition
+	unsigned char transition;
 	RigidBody body;
 } Object;
 
@@ -396,6 +398,20 @@ void updateEngineFuel(GridSpace* gridSpace, float deltaTime)
 	}
 }
 
+typedef struct TransitionDelta
+{
+	char tile;
+	char x;
+	char y;
+} TransitionDelta;
+
+static const TransitionDelta c_transitions[] = {{'c', -1, 0},
+                                                {'<', -1, 0},
+                                                {'V', 0, 1},
+                                                {'A', 0, -1},
+                                                {'>', 1, 0},
+                                                // TODO
+                                                {'f', -1, 0}};
 void doFactory(GridSpace* gridSpace, float deltaTime)
 {
 	for (int cellY = 0; cellY < gridSpace->height; ++cellY)
@@ -407,6 +423,10 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 			{
 				case 'c':
 				case '<':
+				case 'V':
+				case 'A':
+				case '>':
+				case 'f':
 				{
 					for (int i = 0; i < ARRAY_SIZE(objects); ++i)
 					{
@@ -415,7 +435,20 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 						    currentObject->tileY != cellY)
 							continue;
 
-						currentObject->tileX -= 1;
+						// TODO This isn't very safe because if <1, the object will never transition
+						currentObject->transition += 128 * deltaTime;
+						if (currentObject->transition > 128)
+						{
+							for (int transitionIndex = 0;
+							     transitionIndex < ARRAY_SIZE(c_transitions); ++transitionIndex)
+							{
+								if (c_transitions[transitionIndex].tile != cell->type)
+									continue;
+								currentObject->tileX += c_transitions[transitionIndex].x;
+								currentObject->tileY += c_transitions[transitionIndex].y;
+								currentObject->transition = 0;
+							}
+						}
 					}
 					break;
 				}
