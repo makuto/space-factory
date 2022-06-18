@@ -265,6 +265,25 @@ static void setGridSpaceFromString(GridSpace* gridSpace, const char* str)
 	}
 }
 
+static void renderStarField(SDL_Renderer* renderer)
+{
+	static SDL_FRect stars[1024] = {0};
+	static bool starsInitialized = false;
+	if (!starsInitialized)
+	{
+		for (int i = 0; i < ARRAY_SIZE(stars); ++i)
+		{
+			stars[i].x = rand() % 4000;
+			stars[i].y = rand() % 4000;
+			stars[i].w = rand() % 3 + 1;
+			stars[i].h = rand() % 3 + 1;
+		}
+		starsInitialized = true;
+	}
+	SDL_SetRenderDrawColor(renderer, 240, 240, 240, 255);
+	SDL_RenderFillRectsF(renderer, stars, ARRAY_SIZE(stars));
+}
+
 //
 // Physics
 //
@@ -813,6 +832,8 @@ int main(int numArguments, char** arguments)
 
 		// Rendering
 		SDL_RenderClear(renderer);
+
+		renderStarField(renderer);
 
 		renderGridSpaceFromTileSheet(playerShip, playerPhys.position.x, playerPhys.position.y,
 		                             renderer, &tileSheet);
