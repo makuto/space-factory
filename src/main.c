@@ -659,10 +659,7 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 			    mouseY <= destinationRectangle.y + destinationRectangle.h)
 			{
 				if (mouseButtonState & SDL_BUTTON_LMASK)
-				{
-					fprintf(stderr, "Selected %c\n", editButtons[buttonIndex]);
 					currentSelectedTileType = editButtons[buttonIndex];
-				}
 
 				drawOutlineRectangle(renderer, &destinationRectangle, mouseButtonState);
 			}
