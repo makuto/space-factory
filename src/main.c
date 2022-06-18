@@ -19,11 +19,24 @@ extern unsigned char _binary_assets_TileSheet_bmp_end;
 static unsigned char* startTilesheetBmp = (&_binary_assets_TileSheet_bmp_start);
 static unsigned char* endTilesheetBmp = (&_binary_assets_TileSheet_bmp_end);
 
+//Math
+struct Vec2
+{
+	float x;
+	float y;
+};
+
 //
 // Constants
 //
 
 // Rendering
+
+//
+// Camera
+//
+typedef SDL_Rect Camera;
+
 /* const int c_arbitraryDelayTimeMilliseconds = 10; */
 const char c_tileSize = 32;
 
@@ -135,7 +148,7 @@ bool isEngineTile(unsigned char c)
 	return c == 'u' || c == 'l' || c == 'r' || c == 'd';
 }
 static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int originY,
-                                         SDL_Renderer* renderer, TileSheet* tileSheet)
+                                         SDL_Renderer* renderer, TileSheet* tileSheet,Camera* camera)
 {
 	for (int cellY = 0; cellY < gridSpace->height; ++cellY)
 	{
@@ -152,8 +165,8 @@ static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int 
 
 				int textureX = association->column * c_tileSize;
 				int textureY = association->row * c_tileSize;
-				int screenX = originX + (cellX * c_tileSize);
-				int screenY = originY + (cellY * c_tileSize);
+				int screenX = originX + (cellX * c_tileSize) - camera->x;
+				int screenY = originY + (cellY * c_tileSize) - camera->y;
 				if (isEngineTile(tileToFind))
 				{
 					// if this is an engine tile, and its firing, swap the off sprite for the on
@@ -270,7 +283,7 @@ static void setGridSpaceFromString(GridSpace* gridSpace, const char* str)
 	}
 }
 
-static void renderStarField(SDL_Renderer* renderer)
+static void renderStarField(SDL_Renderer* renderer,Camera* camera)
 {
 	static SDL_FRect stars[128] = {0};
 	static bool starsInitialized = false;
@@ -278,8 +291,8 @@ static void renderStarField(SDL_Renderer* renderer)
 	{
 		for (int i = 0; i < ARRAY_SIZE(stars); ++i)
 		{
-			stars[i].x = rand() % 1920;
-			stars[i].y = rand() % 1080;
+			stars[i].x = rand() % 1920 ;
+			stars[i].y = rand() % 1080 ;
 			stars[i].w = rand() % 5 + 1;
 			stars[i].h = rand() % 5 + 1;
 		}
@@ -293,11 +306,6 @@ static void renderStarField(SDL_Renderer* renderer)
 // Physics
 //
 
-struct Vec2
-{
-	float x;
-	float y;
-};
 
 struct RigidBody
 {
@@ -351,7 +359,7 @@ typedef struct Object
 
 Object objects[1024] = {0};
 
-void renderObjects(SDL_Renderer* renderer, TileSheet* tileSheet)
+void renderObjects(SDL_Renderer* renderer, TileSheet* tileSheet, Camera* camera)
 {
 	for (int i = 0; i < ARRAY_SIZE(objects); ++i)
 	{
@@ -368,8 +376,8 @@ void renderObjects(SDL_Renderer* renderer, TileSheet* tileSheet)
 
 			int textureX = association->column * c_tileSize;
 			int textureY = association->row * c_tileSize;
-			int screenX = currentObject->body.position.x;
-			int screenY = currentObject->body.position.y;
+			int screenX = currentObject->body.position.x - camera->x;
+			int screenY = currentObject->body.position.y - camera->y;
 			SDL_Rect sourceRectangle = {textureX, textureY, c_tileSize, c_tileSize};
 			SDL_Rect destinationRectangle = {screenX, screenY, c_tileSize, c_tileSize};
 			SDL_RenderCopyEx(renderer, tileSheet->texture, &sourceRectangle, &destinationRectangle,
@@ -556,18 +564,15 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 }
 
 
-//
-// Camera
-//
-struct Camera{
-	SDL_Rect viewport;
-	Vec2 position;
-};
-
-void updateCameraViewport(Camera * camera){
+void snapCameraToGrid(Camera* camera,Vec2* position, GridSpace* grid){
 	//center camera over its position
-	camera->viewport.x = camera->position.x - camera.viewport.width/2;
-	camera->viewport.y = camera->position.y - camera.viewport.height/2;
+	//compute grid center
+	int x = position->x + (grid->width * c_tileSize)/2;
+	int y = position->y + (grid->height * c_tileSize)/2;
+		
+
+	camera->x = x - camera->w/2;
+	camera->y = y - camera->h/2;
 }
 
 //
@@ -674,6 +679,11 @@ int main(int numArguments, char** arguments)
 	}
 	RigidBody playerPhys = SpawnPlayerPhys();
 	//snap the camera to the player postion
+	Camera camera;
+	camera.x = playerPhys.position.x;
+	camera.y = playerPhys.position.y;
+	camera.w = 1920;
+	camera.h = 1080;
 
 	// Make some objects
 	for (int i = 0; i < 40; ++i)
@@ -850,16 +860,18 @@ int main(int numArguments, char** arguments)
 		}
 
 		doFactory(playerShip, deltaTime);
+		
+		snapCameraToGrid(&camera,&playerPhys.position,playerShip);
 
 		// Rendering
 		SDL_RenderClear(renderer);
 
-		renderStarField(renderer);
+		renderStarField(renderer,&camera);
 
 		renderGridSpaceFromTileSheet(playerShip, playerPhys.position.x, playerPhys.position.y,
-		                             renderer, &tileSheet);
+		                             renderer, &tileSheet,&camera);
 
-		renderObjects(renderer, &tileSheet);
+		renderObjects(renderer, &tileSheet,&camera);
 
 		lastFrameNumTicks = SDL_GetPerformanceCounter();
 		SDL_RenderPresent(renderer);
