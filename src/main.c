@@ -495,6 +495,7 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 									currentObject->tileX += c_deltas[directionIndex].x;
 									currentObject->tileY += c_deltas[directionIndex].y;
 									currentObject->transition = 0;
+									break;
 								}
 							}
 						}
@@ -620,11 +621,11 @@ int main(int numArguments, char** arguments)
 	{
 		setGridSpaceFromString(playerShip,
 		                       "#######d##########"
-		                       "#................#"
-		                       "l<<<<<<<<<<<<<f<<c"
-		                       "l<<<<<<<<<.V<<f<<c"
-		                       "#........A.V..V..#"
-		                       "#........A<<..>>>r"
+		                       "#......A.........#"
+		                       "l<<<<<<f<<<<<<<<<c"
+		                       "l<<<<<<<<<.V<<<<<c"
+		                       "#........A.V.....#"
+		                       "#........A<f>>>>>r"
 		                       "#######u##########");
 
 		renderGridSpaceText(playerShip);
