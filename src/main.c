@@ -584,16 +584,18 @@ void snapCameraToGrid(Camera* camera,Vec2* position, GridSpace* grid){
 // Ship editing
 //
 
-static void renderEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWidth,
-                         int windowHeight)
+static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWidth,
+                     int windowHeight)
 {
 	int mouseX = 0;
 	int mouseY = 0;
 	Uint32 mouseButtonState = SDL_GetMouseState(&mouseX, &mouseY);
 	char editButtons[] = {'#', '.', '<', '>', 'A', 'V', 'f', 'c', 'l', 'r', 'u', 'd'};
 	int buttonMarginX = 5;
-	int startButtonBarX = ((windowWidth / 2) - ((ARRAY_SIZE(editButtons) * (c_tileSize + buttonMarginX)) / 2));
+	int startButtonBarX =
+	    ((windowWidth / 2) - ((ARRAY_SIZE(editButtons) * (c_tileSize + buttonMarginX)) / 2));
 	int buttonBarY = 32;
+	static char currentSelectedTileType = 0;
 	for (int buttonIndex = 0; buttonIndex < ARRAY_SIZE(editButtons); ++buttonIndex)
 	{
 		for (int tileAssociation = 0; tileAssociation < ARRAY_SIZE(tileSheet->associations);
@@ -609,6 +611,35 @@ static void renderEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windo
 			int screenY = buttonBarY;
 			SDL_Rect sourceRectangle = {textureX, textureY, c_tileSize, c_tileSize};
 			SDL_Rect destinationRectangle = {screenX, screenY, c_tileSize, c_tileSize};
+
+			SDL_Rect selectionRectangle = destinationRectangle;
+			const int selectionRectanglePadding = 3;
+			selectionRectangle.x -= selectionRectanglePadding;
+			selectionRectangle.y -= selectionRectanglePadding;
+			selectionRectangle.w += selectionRectanglePadding * 2;
+			selectionRectangle.h += selectionRectanglePadding * 2;
+
+			if (mouseX >= destinationRectangle.x &&
+			    mouseX <= destinationRectangle.x + destinationRectangle.w &&
+			    mouseY >= destinationRectangle.y &&
+			    mouseY <= destinationRectangle.y + destinationRectangle.h)
+			{
+				if (mouseButtonState & SDL_BUTTON_LMASK)
+				{
+					fprintf(stderr, "Selected %c\n", editButtons[buttonIndex]);
+					currentSelectedTileType = editButtons[buttonIndex];
+				}
+
+				// Indicate selection
+				SDL_SetRenderDrawColor(renderer, 255, 178, 109, 255);
+				SDL_RenderFillRect(renderer, &selectionRectangle);
+			}
+			else if (currentSelectedTileType == editButtons[buttonIndex])
+			{
+				SDL_SetRenderDrawColor(renderer, 240, 127, 24, 255);
+				SDL_RenderFillRect(renderer, &selectionRectangle);
+			}
+
 			SDL_RenderCopyEx(renderer, tileSheet->texture, &sourceRectangle, &destinationRectangle,
 			                 c_transformsToAngles[association->transform],
 			                 /*rotate about (default = center)*/ NULL,
@@ -910,6 +941,7 @@ int main(int numArguments, char** arguments)
 		snapCameraToGrid(&camera,&playerPhys.position,playerShip);
 
 		// Rendering
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		SDL_RenderClear(renderer);
 
 		renderStarField(renderer,&camera);
@@ -919,7 +951,7 @@ int main(int numArguments, char** arguments)
 
 		renderObjects(renderer, &tileSheet,&camera);
 
-		renderEditUI(renderer, &tileSheet, windowWidth, windowHeight);
+		doEditUI(renderer, &tileSheet, windowWidth, windowHeight);
 
 		lastFrameNumTicks = SDL_GetPerformanceCounter();
 		SDL_RenderPresent(renderer);
