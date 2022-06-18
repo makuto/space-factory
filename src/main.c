@@ -412,6 +412,15 @@ static const TransitionDelta c_transitions[] = {{'c', -1, 0},
                                                 {'>', 1, 0},
                                                 // TODO
                                                 {'f', -1, 0}};
+typedef struct TileDelta
+{
+	char x;
+	char y;
+	char oppositeConveyor;
+} TileDelta;
+// Useful to check all cardinal directions of a tile
+static const TileDelta c_deltas[] = {{-1, 0, '>'}, {1, 0, '<'}, {0, -1, 'V'}, {0, 1, 'A'}};
+
 void doFactory(GridSpace* gridSpace, float deltaTime)
 {
 	for (int cellY = 0; cellY < gridSpace->height; ++cellY)
@@ -426,7 +435,6 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 				case 'V':
 				case 'A':
 				case '>':
-				case 'f':
 				{
 					for (int i = 0; i < ARRAY_SIZE(objects); ++i)
 					{
@@ -452,6 +460,47 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 					}
 					break;
 				}
+					// Furnaces always output to cells away from them
+				case 'f':
+				{
+					for (int i = 0; i < ARRAY_SIZE(objects); ++i)
+					{
+						Object* currentObject = &objects[i];
+						if (!currentObject->type || currentObject->tileX != cellX ||
+						    currentObject->tileY != cellY)
+							continue;
+
+						// TODO This isn't very safe because if <1, the object will never transition
+						currentObject->transition += 100 * deltaTime;
+						if (currentObject->transition > 128)
+						{
+							for (int directionIndex = 0; directionIndex < ARRAY_SIZE(c_deltas);
+							     ++directionIndex)
+							{
+								char directionCellX = cellX + c_deltas[directionIndex].x;
+								char directionCellY = cellY + c_deltas[directionIndex].y;
+								GridCell* currentCell = &GridCellAt(gridSpace, directionCellX, directionCellY);
+								// Filter out any cells which aren't conveyors
+								// TODO: Check this cell against grid size (otherwise, we WILL crash)
+								if (currentCell->type != '<' && currentCell->type != 'V' &&
+								    currentCell->type != 'A' && currentCell->type != '>')
+									continue;
+								GridCell* cellTo =
+								    &GridCellAt(gridSpace, directionCellX, directionCellY);
+								// TODO: Hack to "randomly" distribute objects in directions
+								if (cellTo->type != c_deltas[directionIndex].oppositeConveyor &&
+								    rand() % 4 == 0)
+								{
+									currentObject->type = 'R';
+									currentObject->tileX += c_deltas[directionIndex].x;
+									currentObject->tileY += c_deltas[directionIndex].y;
+									currentObject->transition = 0;
+								}
+							}
+						}
+					}
+					break;
+				}
 				case 'l':
 				case 'r':
 				case 'u':
@@ -464,7 +513,9 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 						    currentObject->tileY != cellY)
 							continue;
 
-						cell->data.engineCell.fuel += 1.f;
+						// Only refined objects will give fuel; everything else just gets destroyed
+						if (currentObject->type == 'R')
+							cell->data.engineCell.fuel += 1.f;
 						currentObject->type = 0;
 					}
 					break;
@@ -553,7 +604,9 @@ int main(int numArguments, char** arguments)
 
 	                           // Objects
 	                           // Unrefined fuel
-	                           {'U', 0, 3, TextureTransform_None},
+							   {'U', 0, 3, TextureTransform_None},
+							   // Refined fuel
+							   {'R', 1, 0, TextureTransform_None},
 	                       },
 	                       tileSheetTexture};
 
@@ -570,8 +623,8 @@ int main(int numArguments, char** arguments)
 		                       "#................#"
 		                       "l<<<<<<<<<<<<<f<<c"
 		                       "l<<<<<<<<<.V<<f<<c"
-		                       "#........A.V.....#"
-		                       "#........A<<.....r"
+		                       "#........A.V..V..#"
+		                       "#........A<<..>>>r"
 		                       "#######u##########");
 
 		renderGridSpaceText(playerShip);
