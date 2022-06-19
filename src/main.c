@@ -788,14 +788,14 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 	int mouseY = 0;
 	Uint32 mouseButtonState = SDL_GetMouseState(&mouseX, &mouseY);
 	char editButtons[] = {'#', '.', '<', '>', 'A', 'V', 'f', 'c', 'l', 'r', 'u', 'd'};
-	unsigned short inventory[] = {/*'#'=*/100, /*'.'=*/999, /*'<'=*/100, /*'>'=*/100,
-	                              /*'A'=*/100, /*'V'=*/100, /*'f'=*/8,   /*'c'=*/8,
-	                              /*'l'=*/8,   /*'r'=*/8,   /*'u'=*/8,   /*'d'=*/8};
+	static unsigned short inventory[] = {/*'#'=*/100, /*'.'=*/999, /*'<'=*/100, /*'>'=*/100,
+	                                     /*'A'=*/100, /*'V'=*/100, /*'f'=*/8,   /*'c'=*/8,
+	                                     /*'l'=*/8,   /*'r'=*/8,   /*'u'=*/8,   /*'d'=*/8};
 	int buttonMarginX = 5;
 	int startButtonBarX =
 	    ((windowWidth / 2) - ((ARRAY_SIZE(editButtons) * (c_tileSize + buttonMarginX)) / 2));
 	int buttonBarY = 32;
-	static char currentSelectedTileType = editButtons[0];
+	static char currentSelectedButtonIndex = 0;
 	for (int buttonIndex = 0; buttonIndex < ARRAY_SIZE(editButtons); ++buttonIndex)
 	{
 		for (int tileAssociation = 0; tileAssociation < ARRAY_SIZE(tileSheet->associations);
@@ -818,11 +818,11 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 			    mouseY <= destinationRectangle.y + destinationRectangle.h)
 			{
 				if (mouseButtonState & SDL_BUTTON_LMASK)
-					currentSelectedTileType = editButtons[buttonIndex];
+					currentSelectedButtonIndex = buttonIndex;
 
 				drawOutlineRectangle(renderer, &destinationRectangle, mouseButtonState);
 			}
-			else if (currentSelectedTileType == editButtons[buttonIndex])
+			else if (currentSelectedButtonIndex == buttonIndex)
 			{
 				// TODO: This should probably be a different color
 				drawOutlineRectangle(renderer, &destinationRectangle, mouseButtonState);
@@ -850,7 +850,7 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 		     ++tileAssociation)
 		{
 			CharacterSheetCellAssociation* association = &tileSheet->associations[tileAssociation];
-			if (currentSelectedTileType != association->key)
+			if (editButtons[currentSelectedButtonIndex] != association->key)
 				continue;
 
 			int textureX = association->column * c_tileSize;
@@ -871,10 +871,20 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 			break;
 		}
 
-		if (mouseButtonState & SDL_BUTTON_LMASK)
+		if (mouseButtonState & SDL_BUTTON_LMASK && inventory[currentSelectedButtonIndex] &&
+		    selectedCell->type != editButtons[currentSelectedButtonIndex])
 		{
+			// Give back resources
+			for (int buttonIndex = 0; buttonIndex < ARRAY_SIZE(editButtons); ++buttonIndex)
+			{
+				if (selectedCell->type == editButtons[buttonIndex])
+					inventory[buttonIndex] += 1;
+			}
+
+			// Make the placement
+			inventory[currentSelectedButtonIndex] -= 1;
 			memset(selectedCell, sizeof(GridCell), 0);
-			selectedCell->type = currentSelectedTileType;
+			selectedCell->type = editButtons[currentSelectedButtonIndex];
 		}
 	}
 }
