@@ -760,17 +760,43 @@ static void drawOutlineRectangle(SDL_Renderer* renderer, SDL_Rect* rectangleToOu
 	SDL_RenderFillRect(renderer, &selectionRectangle);
 }
 
+static void renderText(SDL_Renderer* renderer, TileSheet* tileSheet, int x, int y,
+					   const char* text)
+{
+	const int c_fontStartX = 0;
+	const int c_fontStartY = 99;
+	const int c_fontWidth = 7;
+	const int c_fontHeight = 10;
+	const int c_charactersPerRow = 18;
+	const int c_fontVerticalSpace = 5;
+	for (const char* read = text; *read; ++read)
+	{
+		// Only uppercase
+		if (*read < 'A' || *read > 'Z')
+			continue;
+		char index = *read - 'A';
+		int textureX = c_fontStartX + ((index % c_charactersPerRow) * c_fontWidth);
+		int textureY = c_fontStartY + ((index / c_charactersPerRow) * (c_fontHeight + c_fontVerticalSpace));
+		int screenX = x + ((read - text) * c_fontWidth);
+		int screenY = y;
+		SDL_Rect sourceRectangle = {textureX, textureY, c_fontWidth, c_fontHeight};
+		SDL_Rect destinationRectangle = {screenX, screenY, c_fontWidth, c_fontHeight};
+		SDL_RenderCopy(renderer, tileSheet->texture, &sourceRectangle, &destinationRectangle);
+	}
+}
+
 static void renderNumber(SDL_Renderer* renderer, TileSheet* tileSheet, int x, int y,
                          unsigned int value)
 {
 	char numberBuffer[16] = {0};
 	snprintf(numberBuffer, sizeof(numberBuffer) - 1, "%d", value);
-	const int c_fontStartY = 117;
-	const int c_fontWidth = 8;
+	const int c_fontStartX = 56;
+	const int c_fontStartY = 114;
+	const int c_fontWidth = 7;
 	const int c_fontHeight = 10;
-	for (char* read = numberBuffer; *read; ++read)
+	for (const char* read = numberBuffer; *read; ++read)
 	{
-		int textureX = (*read - '0') * c_fontWidth;
+		int textureX = c_fontStartX + ((*read - '0') * c_fontWidth);
 		int textureY = c_fontStartY;
 		int screenX = x + ((read - numberBuffer) * c_fontWidth);
 		int screenY = y;
@@ -1119,6 +1145,7 @@ int main(int numArguments, char** arguments)
 		renderObjects(renderer, &tileSheet, &camera);
 
 		renderNumber(renderer, &tileSheet, 100, 100, (int)(Magnitude(&playerPhys.velocity)));
+		renderText(renderer, &tileSheet, 100, 80, "VELOCITY");
 
 		Vec2 cameraPosition = {(float)camera.x, (float)camera.y};
 		doEditUI(renderer, &tileSheet, windowWidth, windowHeight, cameraPosition,
