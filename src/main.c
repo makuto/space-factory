@@ -291,6 +291,7 @@ static void setGridSpaceFromString(GridSpace* gridSpace, const char* str)
 static void renderStarField(SDL_Renderer* renderer, Camera* camera)
 {
 	static SDL_FRect stars[128] = {0};
+	static SDL_FRect dynstars[128] = {0};
 	static bool starsInitialized = false;
 	if (!starsInitialized)
 	{
@@ -300,11 +301,20 @@ static void renderStarField(SDL_Renderer* renderer, Camera* camera)
 			stars[i].y = rand() % 1080;
 			stars[i].w = rand() % 5 + 1;
 			stars[i].h = rand() % 5 + 1;
+			dynstars[i].w = stars[i].w;
+			dynstars[i].h = stars[i].h;
 		}
 		starsInitialized = true;
 	}
+
+	for (int i = 0; i < ARRAY_SIZE(stars); ++i)
+	{
+		dynstars[i].x = stars[i].x - camera->x/1000;
+		dynstars[i].y = stars[i].y - camera->y/1000;
+	}
+
 	SDL_SetRenderDrawColor(renderer, 128, 128, 128, 255);
-	SDL_RenderFillRectsF(renderer, stars, ARRAY_SIZE(stars));
+	SDL_RenderFillRectsF(renderer, dynstars, ARRAY_SIZE(dynstars));
 }
 
 //
@@ -800,6 +810,22 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 			selectedCell->type = currentSelectedTileType;
 		}
 	}
+}
+
+
+
+//Goal
+//for now just a simple rect
+//
+
+
+
+static void renderGoal(SDL_Renderer* renderer, Camera* camera, SDL_Rect* goal){
+
+}
+
+void CheckGoalSatisfied(Vec2* PlayerPos, GridSpace* PlayerShip){
+
 }
 
 //
