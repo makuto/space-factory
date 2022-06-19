@@ -17,7 +17,9 @@
 
 ;; Needed so SDL can open DLLs...not sure when it does that, but I'm guessing it is required for
 ;; interacting with X/Wayland, whatever at the very least
-(add-linker-options "-ldl")
+(comptime-cond
+ ('Unix
+  (add-linker-options "-ldl")))
 
 (comptime-cond
  ('Windows
