@@ -35,7 +35,8 @@ struct Vec2
 //
 // Camera
 //
-typedef SDL_Rect Camera;
+typedef SDL_FRect Camera;
+const float c_cameraEaseFactor = 5.f;
 
 /* const int c_arbitraryDelayTimeMilliseconds = 10; */
 const char c_tileSize = 32;
@@ -581,15 +582,26 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 	}
 }
 
-void snapCameraToGrid(Camera* camera, Vec2* position, GridSpace* grid)
+void snapCameraToGrid(Camera* camera, Vec2* position, GridSpace* grid, float deltaTime)
 {
 	// center camera over its position
 	// compute grid center
-	int x = position->x + (grid->width * c_tileSize) / 2;
-	int y = position->y + (grid->height * c_tileSize) / 2;
+	float x = position->x + (grid->width * c_tileSize) / 2;
+	float y = position->y + (grid->height * c_tileSize) / 2;
 
-	camera->x = x - camera->w / 2;
-	camera->y = y - camera->h / 2;
+	float cameraOffsetX = (camera->w / 2.f);
+	float cameraOffsetY = (camera->h / 2.f);
+	float goalX = x;
+	float goalY = y;
+	camera->x += cameraOffsetX;
+	camera->y += cameraOffsetY;
+	// Ease in
+	camera->x += (goalX - camera->x) * c_cameraEaseFactor * deltaTime;
+	camera->y += (goalY - camera->y) * c_cameraEaseFactor * deltaTime;
+	camera->x -= cameraOffsetX;
+	camera->y -= cameraOffsetY;
+
+	fprintf(stderr, "%f, %f (player: %f, %f)\n", camera->x, camera->y, position->x, position->y);
 }
 
 void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float deltaTime)
@@ -936,10 +948,10 @@ int main(int numArguments, char** arguments)
 	RigidBody playerPhys = SpawnPlayerPhys();
 	// snap the camera to the player postion
 	Camera camera;
-	camera.x = playerPhys.position.x;
-	camera.y = playerPhys.position.y;
-	camera.w = 1920;
-	camera.h = 1080;
+	camera.x = playerPhys.position.x - (windowWidth / 2) + (playerShipData.width * c_tileSize) / 2;
+	camera.y = playerPhys.position.y - (windowHeight / 2) + (playerShipData.height * c_tileSize) / 2;
+	camera.w = windowWidth;
+	camera.h = windowHeight;
 
 	// Make some objects
 	for (int i = 0; i < 40; ++i)
@@ -1030,7 +1042,7 @@ int main(int numArguments, char** arguments)
 		updateObjects(&playerPhys, &playerShipData, deltaTime);
 
 		doFactory(playerShip, deltaTime);
-		snapCameraToGrid(&camera, &playerPhys.position, playerShip);
+		snapCameraToGrid(&camera, &playerPhys.position, playerShip, deltaTime);
 
 		// Rendering
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
