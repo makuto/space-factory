@@ -48,7 +48,7 @@ const float c_defaultStartFuel = 2.f;
 const float c_fuelConsumptionRate = 1.f;
 
 // Physics
-const float c_playerDrag = 0.1f;
+const float c_playerDrag = 0.f;
 const float c_objectDrag = 0.f;
 const float c_deadLimit = 0.02f;  // the minimum velocity below which we are stationary
 
@@ -760,6 +760,26 @@ static void drawOutlineRectangle(SDL_Renderer* renderer, SDL_Rect* rectangleToOu
 	SDL_RenderFillRect(renderer, &selectionRectangle);
 }
 
+static void renderNumber(SDL_Renderer* renderer, TileSheet* tileSheet, int x, int y,
+                         unsigned int value)
+{
+	char numberBuffer[16] = {0};
+	snprintf(numberBuffer, sizeof(numberBuffer) - 1, "%d", value);
+	const int c_fontStartY = 117;
+	const int c_fontWidth = 8;
+	const int c_fontHeight = 10;
+	for (char* read = numberBuffer; *read; ++read)
+	{
+		int textureX = (*read - '0') * c_fontWidth;
+		int textureY = c_fontStartY;
+		int screenX = x + ((read - numberBuffer) * c_fontWidth);
+		int screenY = y;
+		SDL_Rect sourceRectangle = {textureX, textureY, c_fontWidth, c_fontHeight};
+		SDL_Rect destinationRectangle = {screenX, screenY, c_fontWidth, c_fontHeight};
+		SDL_RenderCopy(renderer, tileSheet->texture, &sourceRectangle, &destinationRectangle);
+	}
+}
+
 static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWidth,
                      int windowHeight, Vec2 cameraPosition, Vec2 gridSpaceWorldPosition,
                      GridSpace* editGridSpace)
@@ -768,6 +788,9 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 	int mouseY = 0;
 	Uint32 mouseButtonState = SDL_GetMouseState(&mouseX, &mouseY);
 	char editButtons[] = {'#', '.', '<', '>', 'A', 'V', 'f', 'c', 'l', 'r', 'u', 'd'};
+	unsigned short inventory[] = {/*'#'=*/100, /*'.'=*/999, /*'<'=*/100, /*'>'=*/100,
+	                              /*'A'=*/100, /*'V'=*/100, /*'f'=*/8,   /*'c'=*/8,
+	                              /*'l'=*/8,   /*'r'=*/8,   /*'u'=*/8,   /*'d'=*/8};
 	int buttonMarginX = 5;
 	int startButtonBarX =
 	    ((windowWidth / 2) - ((ARRAY_SIZE(editButtons) * (c_tileSize + buttonMarginX)) / 2));
@@ -809,6 +832,9 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 			                 c_transformsToAngles[association->transform],
 			                 /*rotate about (default = center)*/ NULL,
 			                 c_transformsToSDLRenderFlips[association->transform]);
+
+			renderNumber(renderer, tileSheet, screenX, screenY + c_tileSize + 5,
+			             inventory[buttonIndex]);
 			break;
 		}
 	}
@@ -852,8 +878,6 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 		}
 	}
 }
-
-
 
 //Goal
 //for now just a simple rect
@@ -1083,6 +1107,8 @@ int main(int numArguments, char** arguments)
 		                             renderer, &tileSheet, &camera);
 
 		renderObjects(renderer, &tileSheet, &camera);
+
+		renderNumber(renderer, &tileSheet, 100, 100, (int)(Magnitude(&playerPhys.velocity)));
 
 		Vec2 cameraPosition = {(float)camera.x, (float)camera.y};
 		doEditUI(renderer, &tileSheet, windowWidth, windowHeight, cameraPosition,
