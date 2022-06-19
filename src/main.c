@@ -813,7 +813,11 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 	int mouseX = 0;
 	int mouseY = 0;
 	Uint32 mouseButtonState = SDL_GetMouseState(&mouseX, &mouseY);
+	static char currentSelectedButtonIndex = 0;
 	char editButtons[] = {'#', '.', '<', '>', 'A', 'V', 'f', 'c', 'l', 'r', 'u', 'd'};
+	const char* editButtonLabels[] = {
+	    "WALL",     "FLOOR",  "CONVEYOR LEFT", "CONVEYOR RIGHT", "CONVEYOR UP", "CONVEYOR DOWN",
+	    "REFINERY", "INTAKE", "ENGINE LEFT",   "ENGINE RIGHT",   "ENGINE UP",   "ENGINE DOWN"};
 	static unsigned short inventory[] = {/*'#'=*/100, /*'.'=*/999, /*'<'=*/100, /*'>'=*/100,
 	                                     /*'A'=*/100, /*'V'=*/100, /*'f'=*/8,   /*'c'=*/8,
 	                                     /*'l'=*/8,   /*'r'=*/8,   /*'u'=*/8,   /*'d'=*/8};
@@ -821,7 +825,9 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 	int startButtonBarX =
 	    ((windowWidth / 2) - ((ARRAY_SIZE(editButtons) * (c_tileSize + buttonMarginX)) / 2));
 	int buttonBarY = 32;
-	static char currentSelectedButtonIndex = 0;
+
+	renderText(renderer, tileSheet, startButtonBarX, buttonBarY - 18, "INVENTORY");
+
 	for (int buttonIndex = 0; buttonIndex < ARRAY_SIZE(editButtons); ++buttonIndex)
 	{
 		for (int tileAssociation = 0; tileAssociation < ARRAY_SIZE(tileSheet->associations);
@@ -847,6 +853,9 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 					currentSelectedButtonIndex = buttonIndex;
 
 				drawOutlineRectangle(renderer, &destinationRectangle, mouseButtonState);
+
+				renderText(renderer, tileSheet, screenX, screenY + c_tileSize + 18,
+				           editButtonLabels[buttonIndex]);
 			}
 			else if (currentSelectedButtonIndex == buttonIndex)
 			{
@@ -1118,14 +1127,27 @@ int main(int numArguments, char** arguments)
 
 		updateEngineFuel(&playerShipData, deltaTime);
 
+		bool playerAtMaxVelocity = false;
 		if (playerPhys.velocity.y > c_maxSpeed)
+		{
 			playerPhys.velocity.y = c_maxSpeed;
+			playerAtMaxVelocity = true;
+		}
 		if (playerPhys.velocity.y < -c_maxSpeed)
+		{
 			playerPhys.velocity.y = -c_maxSpeed;
+			playerAtMaxVelocity = true;
+		}
 		if (playerPhys.velocity.x > c_maxSpeed)
+		{
 			playerPhys.velocity.x = c_maxSpeed;
+			playerAtMaxVelocity = true;
+		}
 		if (playerPhys.velocity.x < -c_maxSpeed)
+		{
 			playerPhys.velocity.x = -c_maxSpeed;
+			playerAtMaxVelocity = true;
+		}
 
 		UpdatePhysics(&playerPhys, c_playerDrag, deltaTime);
 		updateObjects(&playerPhys, &playerShipData, deltaTime);
@@ -1144,8 +1166,16 @@ int main(int numArguments, char** arguments)
 
 		renderObjects(renderer, &tileSheet, &camera);
 
-		renderNumber(renderer, &tileSheet, 100, 100, (int)(Magnitude(&playerPhys.velocity)));
-		renderText(renderer, &tileSheet, 100, 80, "VELOCITY");
+		// HUD
+		{
+			int playerVelocity = (int)(Magnitude(&playerPhys.velocity));
+			renderNumber(renderer, &tileSheet, 100, 100, playerVelocity);
+			renderText(renderer, &tileSheet, 100, 80, "VELOCITY");
+			// This is a bit weird, but informs the player that they will just waste fuel if they
+			// keep burning in that direction
+			if (playerVelocity >= (int)c_maxSpeed)
+				renderText(renderer, &tileSheet, 100, 120, "WARNING MAX VELOCITY REACHED");
+		}
 
 		Vec2 cameraPosition = {(float)camera.x, (float)camera.y};
 		doEditUI(renderer, &tileSheet, windowWidth, windowHeight, cameraPosition,
