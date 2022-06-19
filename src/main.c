@@ -14,10 +14,12 @@
 // SpaceFactory.cake generates these
 //
 
+#ifndef NO_DATA_BUNDLE
 extern unsigned char _binary_assets_TileSheet_bmp_start;
 extern unsigned char _binary_assets_TileSheet_bmp_end;
 static unsigned char* startTilesheetBmp = (&_binary_assets_TileSheet_bmp_start);
 static unsigned char* endTilesheetBmp = (&_binary_assets_TileSheet_bmp_end);
+#endif
 
 // Math
 struct Vec2
@@ -974,9 +976,13 @@ int main(int numArguments, char** arguments)
 	// Load tile sheet into texture
 	SDL_Texture* tileSheetTexture = NULL;
 	{
+#ifdef NO_DATA_BUNDLE
+		SDL_Surface* tileSheetSurface = SDL_LoadBMP("assets/TileSheet.bmp");
+#else
 		SDL_RWops* tileSheetRWOps =
 		    SDL_RWFromMem(startTilesheetBmp, endTilesheetBmp - startTilesheetBmp);
 		SDL_Surface* tileSheetSurface = SDL_LoadBMP_RW(tileSheetRWOps, /*freesrc=*/1);
+#endif
 		if (!tileSheetSurface)
 		{
 			fprintf(stderr, "Failed to load tile sheet\n");

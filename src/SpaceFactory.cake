@@ -5,7 +5,10 @@
 
 (import "SDL.cake" "DataBundle.cake")
 
-(bundle-file start-tilesheet-bmp end-tilesheet-bmp (unsigned char) "assets/TileSheet.bmp")
+(comptime-cond
+ ('No-Data-Bundle (ignore))
+ (true
+  (bundle-file start-tilesheet-bmp end-tilesheet-bmp (unsigned char) "assets/TileSheet.bmp")))
 
 (add-c-search-directory-global "src")
 
