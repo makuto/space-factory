@@ -596,12 +596,29 @@ void snapCameraToGrid(Camera* camera, Vec2* position, GridSpace* grid, float del
 	camera->x += cameraOffsetX;
 	camera->y += cameraOffsetY;
 	// Ease in
-	camera->x += (goalX - camera->x) * c_cameraEaseFactor * deltaTime;
-	camera->y += (goalY - camera->y) * c_cameraEaseFactor * deltaTime;
+	float deltaX = goalX - camera->x;
+	float deltaY = goalY - camera->y;
+	/* static float deltaSmoothing[10][2] = {0}; */
+	/* static char deltaSmoothingWriteHead = 0; */
+	/* deltaSmoothing[deltaSmoothingWriteHead][0] = deltaX; */
+	/* deltaSmoothing[deltaSmoothingWriteHead][1] = deltaY; */
+	/* ++deltaSmoothingWriteHead; */
+	/* if (deltaSmoothingWriteHead >= ARRAY_SIZE(deltaSmoothing)) */
+	/* 	deltaSmoothingWriteHead = 0; */
+	/* float averageDelta[2] = {0}; */
+	/* for(int i = 0; i < ARRAY_SIZE(deltaSmoothing); ++i) */
+	/* { */
+	/* 	averageDelta[0] += deltaSmoothing[i][0]; */
+	/* 	averageDelta[1] += deltaSmoothing[i][1]; */
+	/* } */
+	/* averageDelta[0] /= ARRAY_SIZE(deltaSmoothing); */
+	/* averageDelta[1] /= ARRAY_SIZE(deltaSmoothing); */
+	camera->x += deltaX * c_cameraEaseFactor * deltaTime;
+	camera->y += deltaY * c_cameraEaseFactor * deltaTime;
 	camera->x -= cameraOffsetX;
 	camera->y -= cameraOffsetY;
 
-	fprintf(stderr, "%f, %f (player: %f, %f)\n", camera->x, camera->y, position->x, position->y);
+	/* fprintf(stderr, "%f, %f (player: %f, %f) delta %f %f\n", camera->x, camera->y, position->x, position->y, deltaX, deltaY); */
 }
 
 void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float deltaTime)
