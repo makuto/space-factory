@@ -666,18 +666,30 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
 				// detect collision with edges
 				if (playerPhys->velocity.x > 0 && ((int)objShipLocalX == playerShipData->width - 1 ||
 				                                  (int)objShipLocalX == playerShipData->width - 2))
-					currentObject->body.velocity.x = playerPhys->velocity.x;
+				{
+					currentObject->body.velocity.x = playerPhys->velocity.x * 1.2f;
+					playerPhys->velocity.x -= 10.f;
+				}
 
 				if (playerPhys->velocity.x < 0 && shipTileX == 0)
-					currentObject->body.velocity.x = playerPhys->velocity.x;
+				{
+					currentObject->body.velocity.x = playerPhys->velocity.x * 1.2f;
+					playerPhys->velocity.x -= 10.f;
+				}
 			}
 			if (objShipLocalX > 0 && objShipLocalX <= playerShipData->width)
 			{
 				// detect collision with edges
 				if (playerPhys->velocity.y > 0 && (int)objShipLocalY == playerShipData->height - 1)
-					currentObject->body.velocity.y = playerPhys->velocity.y;
+				{
+					currentObject->body.velocity.y = playerPhys->velocity.y * 1.2f;
+					playerPhys->velocity.y -= 10.f;
+				}
 				if (playerPhys->velocity.y < 0 && (int)objShipLocalY == 0)
-					currentObject->body.velocity.y = playerPhys->velocity.y;
+				{
+					currentObject->body.velocity.y = playerPhys->velocity.y * 1.2f;
+					playerPhys->velocity.y -= 10.f;
+				}
 			}
 		}
 
@@ -975,7 +987,7 @@ int main(int numArguments, char** arguments)
 	{
 		Object* testObject = &objects[i];
 		testObject->type = 'U';
-		testObject->body.position.x = (float)(rand() % windowWidth);
+		testObject->body.position.x = (float)(rand() % windowWidth) + 700;
 		testObject->body.position.y = (float)(rand() % windowHeight);
 		testObject->body.velocity.x = (float)((rand() % 50) - 25);
 		testObject->body.velocity.y = (float)((rand() % 50) - 25);
