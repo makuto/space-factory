@@ -88,10 +88,7 @@ struct EngineCell
 struct GridCell
 {
 	unsigned char type;
-	union
-	{
-		EngineCell engineCell;
-	} data;
+	EngineCell engineCell;
 };
 
 typedef struct GridSpace
@@ -191,7 +188,7 @@ static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int 
 				{
 					// if this is an engine tile, and its firing, swap the off sprite for the on
 					// sprite, and draw the trail
-					if (GridCellAt(gridSpace, cellX, cellY).data.engineCell.firing)
+					if (GridCellAt(gridSpace, cellX, cellY).engineCell.firing)
 					{
 						textureX += c_tileSize;
 						SDL_Rect sourceRectangle = {textureX + c_tileSize, textureY, c_tileSize,
@@ -260,7 +257,7 @@ static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int 
 					SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 					SDL_RenderDrawRect(renderer, &fuelMeterRect);
 					float fuelPercentage =
-					    (GridCellAt(gridSpace, cellX, cellY).data.engineCell.fuel) / c_maxFuel;
+					    (GridCellAt(gridSpace, cellX, cellY).engineCell.fuel) / c_maxFuel;
 					if (meterWidth > meterHeight)
 					{
 						meterWidth *= fuelPercentage;
@@ -295,8 +292,8 @@ static void setGridSpaceFromString(GridSpace* gridSpace, const char* str)
 		writeHead->type = *c;
 		if (isEngineTile(*c))
 		{
-			writeHead->data.engineCell.fuel = c_defaultStartFuel;
-			writeHead->data.engineCell.firing = false;
+			writeHead->engineCell.fuel = c_defaultStartFuel;
+			writeHead->engineCell.firing = false;
 		}
 
 		++writeHead;
@@ -443,9 +440,9 @@ int controlEnginesInDirection(GridSpace* gridSpace, char tileType, bool set)
 		for (int cellX = 0; cellX < gridSpace->width; ++cellX)
 		{
 			GridCell* cell = &GridCellAt(gridSpace, cellX, cellY);
-			if (tileType == cell->type && cell->data.engineCell.fuel > 0)
+			if (tileType == cell->type && cell->engineCell.fuel > 0)
 			{
-				cell->data.engineCell.firing = set;
+				cell->engineCell.firing = set;
 				count++;
 			}
 		}
@@ -460,14 +457,14 @@ void updateEngineFuel(GridSpace* gridSpace, float deltaTime)
 		for (int cellX = 0; cellX < gridSpace->width; ++cellX)
 		{
 			GridCell* cell = &GridCellAt(gridSpace, cellX, cellY);
-			if (isEngineTile(cell->type) && cell->data.engineCell.firing)
+			if (isEngineTile(cell->type) && cell->engineCell.firing)
 			{
-				cell->data.engineCell.fuel -= c_fuelConsumptionRate * deltaTime;
+				cell->engineCell.fuel -= c_fuelConsumptionRate * deltaTime;
 
-				if (cell->data.engineCell.fuel <= 0.f)
+				if (cell->engineCell.fuel <= 0.f)
 				{
-					cell->data.engineCell.fuel = 0.f;
-					cell->data.engineCell.firing = false;
+					cell->engineCell.fuel = 0.f;
+					cell->engineCell.firing = false;
 				}
 			}
 		}
@@ -611,7 +608,7 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 
 						// Only refined objects will give fuel; everything else just gets destroyed
 						if (currentObject->type == 'g')
-							cell->data.engineCell.fuel += 1.f;
+							cell->engineCell.fuel += 1.f;
 						currentObject->type = 0;
 					}
 					break;
@@ -1045,7 +1042,10 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 
 			// Make the placement
 			inventory[currentSelectedButtonIndex] -= 1;
-			memset(selectedCell, sizeof(GridCell), 0);
+			/* memset(selectedCell, sizeof(GridCell), 0); */
+			assert(selectedCell >= editGridSpace->data &&
+			       selectedCell <
+			           editGridSpace->data + (editGridSpace->width * editGridSpace->height));
 			selectedCell->type = editButtons[currentSelectedButtonIndex];
 		}
 	}
@@ -1073,7 +1073,8 @@ static void doEndScreenSuccess(SDL_Renderer* renderer, TileSheet* tileSheet)
 	    "YOUR EXHAUSTED CREW CELEBRATES\n\n"
 	    "BUT YOU KNOW THIS IS ONLY THE BEGINNING\n"
 	    "\n\n\n\n"
-	    "THANK YOU FOR PLAYING\n\n"
+		"THANK YOU FOR PLAYING\n\n"
+		"CREATED BY\n"
 	    "MACOY MADSON\n"
 	    "WILL CHAMBERS\n\n"
 	    "COPYRIGHT TWENTY TWENTY TWO\n"
