@@ -155,8 +155,8 @@ typedef struct CharacterSheetCellAssociation
 
 typedef struct TileSheet
 {
-	// That's how big the tile sheet is!
-	CharacterSheetCellAssociation associations[4 * 4];
+	// This is the number of distinct things that can be rendered from the tile sheet
+	CharacterSheetCellAssociation associations[17];
 
 	SDL_Texture* texture;
 } TileSheet;
@@ -481,13 +481,9 @@ typedef struct TransitionDelta
 	char y;
 } TransitionDelta;
 
-static const TransitionDelta c_transitions[] = {{'c', -1, 0},
-                                                {'<', -1, 0},
-                                                {'V', 0, 1},
-                                                {'A', 0, -1},
-                                                {'>', 1, 0},
-                                                // TODO
-                                                {'f', -1, 0}};
+static const TransitionDelta c_transitions[] = {{'R', -1, 0}, {'U', 0, 1},  {'D', 0, -1},
+                                                {'L', 1, 0},  {'<', -1, 0}, {'V', 0, 1},
+                                                {'A', 0, -1}, {'>', 1, 0}};
 typedef struct TileDelta
 {
 	char x;
@@ -496,6 +492,47 @@ typedef struct TileDelta
 } TileDelta;
 // Useful to check all cardinal directions of a tile
 static const TileDelta c_deltas[] = {{-1, 0, '<'}, {1, 0, '>'}, {0, -1, 'A'}, {0, 1, 'V'}};
+
+// Pick a random outgoing conveyor and move the object onto it
+static void conveyorAway(GridSpace* gridSpace, Object* objectToConveyor)
+{
+	for (int directionIndex = 0; directionIndex < ARRAY_SIZE(c_deltas);
+		 ++directionIndex)
+	{
+		char directionCellX = objectToConveyor->tileX + c_deltas[directionIndex].x;
+		char directionCellY = objectToConveyor->tileY + c_deltas[directionIndex].y;
+
+		// Don't allow out of bounds
+		if (directionCellX < 0 || directionCellX >= gridSpace->width || directionCellY < 0 ||
+		    directionCellY >= gridSpace->height)
+			return;
+
+		GridCell* currentCell =
+			&GridCellAt(gridSpace, directionCellX, directionCellY);
+		GridCell* cellTo =
+			&GridCellAt(gridSpace, directionCellX, directionCellY);
+		// TODO: Hack to "randomly" distribute objects in directions
+		if (cellTo->type == c_deltas[directionIndex].conveyor &&
+			rand() % 4 == 0)
+		{
+			objectToConveyor->tileX = directionCellX;
+			objectToConveyor->tileY = directionCellY;
+			objectToConveyor->transition = 0;
+			break;
+		}
+	}
+}
+
+static bool isIntake(char cellType)
+{
+	static const char intakes[] = {'L', 'R', 'U', 'D'};
+	for (int i = 0; i < ARRAY_SIZE(intakes); ++i)
+	{
+		if (intakes[i] == cellType)
+			return true;
+	}
+	return false;
+}
 
 void doFactory(GridSpace* gridSpace, float deltaTime)
 {
@@ -506,7 +543,10 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 			GridCell* cell = &GridCellAt(gridSpace, cellX, cellY);
 			switch (cell->type)
 			{
-				case 'c':
+				case 'L':
+				case 'R':
+				case 'U':
+				case 'D':
 				case '<':
 				case 'V':
 				case 'A':
@@ -547,40 +587,16 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 							continue;
 
 						// Move objects along which aren't unrefined the same speed as a conveyor
-						if (currentObject->type == 'U')
+						if (currentObject->type == 'a')
 							currentObject->transition += c_furnaceTransitionPerSecond * deltaTime;
 						else
 							currentObject->transition += c_conveyorTransitionPerSecond * deltaTime;
 						if (currentObject->transition > c_transitionThreshold)
 						{
-							// TODO: Make generic FindAwayConveyor function
-							for (int directionIndex = 0; directionIndex < ARRAY_SIZE(c_deltas);
-							     ++directionIndex)
-							{
-								char directionCellX = cellX + c_deltas[directionIndex].x;
-								char directionCellY = cellY + c_deltas[directionIndex].y;
-								GridCell* currentCell =
-								    &GridCellAt(gridSpace, directionCellX, directionCellY);
-								// Filter out any cells which aren't conveyors
-								// TODO: Check this cell against grid size (otherwise, we WILL
-								// crash)
-								if (currentCell->type != '<' && currentCell->type != 'V' &&
-								    currentCell->type != 'A' && currentCell->type != '>')
-									continue;
-								GridCell* cellTo =
-								    &GridCellAt(gridSpace, directionCellX, directionCellY);
-								// TODO: Hack to "randomly" distribute objects in directions
-								if (cellTo->type == c_deltas[directionIndex].conveyor &&
-								    rand() % 4 == 0)
-								{
-									if (currentObject->type == 'U')
-										currentObject->type = 'R';
-									currentObject->tileX += c_deltas[directionIndex].x;
-									currentObject->tileY += c_deltas[directionIndex].y;
-									currentObject->transition = 0;
-									break;
-								}
-							}
+							if (currentObject->type == 'a')
+								currentObject->type = 'g';
+
+							conveyorAway(gridSpace, currentObject);
 						}
 					}
 					break;
@@ -598,7 +614,7 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 							continue;
 
 						// Only refined objects will give fuel; everything else just gets destroyed
-						if (currentObject->type == 'R')
+						if (currentObject->type == 'g')
 							cell->data.engineCell.fuel += 1.f;
 						currentObject->type = 0;
 					}
@@ -728,7 +744,7 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
 		{
 			if (objShipLocalY > 0 && objShipLocalY <= playerShipData->height)
 			{
-				if (cell.type == 'c')
+				if (isIntake(cell.type))
 				{
 					currentObject->body.position.x =
 					    (shipTileX * c_tileSize) + playerPhys->position.x;
@@ -860,12 +876,17 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 	int mouseY = 0;
 	Uint32 mouseButtonState = SDL_GetMouseState(&mouseX, &mouseY);
 	static char currentSelectedButtonIndex = 0;
-	char editButtons[] = {'#', '.', '<', '>', 'A', 'V', 'f', 'c', 'l', 'r', 'u', 'd'};
-	const char* editButtonLabels[] = {
-	    "WALL",     "FLOOR",  "CONVEYOR LEFT", "CONVEYOR RIGHT", "CONVEYOR UP", "CONVEYOR DOWN",
-	    "REFINERY", "INTAKE", "ENGINE LEFT",   "ENGINE RIGHT",   "ENGINE UP",   "ENGINE DOWN"};
+	char editButtons[] = {'#', '.', '<', '>', 'A', 'V', 'f', 'L',
+	                      'R', 'U', 'D', 'l', 'r', 'u', 'd'};
+	const char* editButtonLabels[] = {"WALL", "FLOOR", "CONVEYOR LEFT", "CONVEYOR RIGHT",
+	                                  "CONVEYOR UP", "CONVEYOR DOWN", "REFINERY",
+	                                  // Intakes
+	                                  "INTAKE LEFT", "INTAKE RIGHT", "INTAKE UP", "INTAKE DOWN",
+	                                  // Engines
+	                                  "ENGINE LEFT", "ENGINE RIGHT", "ENGINE UP", "ENGINE DOWN"};
 	static unsigned short inventory[] = {/*'#'=*/100, /*'.'=*/999, /*'<'=*/100, /*'>'=*/100,
-	                                     /*'A'=*/100, /*'V'=*/100, /*'f'=*/8,   /*'c'=*/8,
+	                                     /*'A'=*/100, /*'V'=*/100, /*'f'=*/8,   /*'L'=*/8,
+	                                     /*'R'=*/8,   /*'U'=*/8,   /*'D'=*/8,
 	                                     /*'l'=*/8,   /*'r'=*/8,   /*'u'=*/8,   /*'d'=*/8};
 	const int c_buttonMarginX = 22;
 	int startButtonBarX =
@@ -1192,7 +1213,13 @@ int main(int numArguments, char** arguments)
 	                           // Furnace
 	                           {'f', 2, 1, TextureTransform_None},
 	                           // Intake from right
-	                           {'c', 2, 0, TextureTransform_None},
+							   {'R', 2, 0, TextureTransform_None},
+							   // Intake from left
+							   {'L', 2, 0, TextureTransform_FlipHorizontal},
+							   // Intake from top
+							   {'U', 2, 0, TextureTransform_CounterClockwise90},
+							   // Intake from bottom
+							   {'D', 2, 0, TextureTransform_Clockwise90},
 	                           // Engine to left (unpowered)
 	                           {'l', 1, 1, TextureTransform_FlipHorizontal},
 	                           {'r', 1, 1, TextureTransform_None},
@@ -1200,10 +1227,10 @@ int main(int numArguments, char** arguments)
 	                           {'d', 1, 1, TextureTransform_CounterClockwise90},
 
 	                           // Objects
-	                           // Unrefined fuel
-	                           {'U', 0, 3, TextureTransform_None},
+	                           // Unrefined fuel (asteroid)
+	                           {'a', 0, 3, TextureTransform_None},
 	                           // Refined fuel
-	                           {'R', 1, 0, TextureTransform_None},
+	                           {'g', 1, 0, TextureTransform_None},
 	                       },
 	                       tileSheetTexture};
 
@@ -1218,8 +1245,8 @@ int main(int numArguments, char** arguments)
 		setGridSpaceFromString(playerShip,
 		                       "#######d##########"
 		                       "#......A.........#"
-		                       "l<<<<<<f<<<<<<<<<c"
-		                       "l<<<<<<<<<.V<<<<<c"
+		                       "l<<<<<<f<<<<<<<<<R"
+		                       "l<<<<<<<<<.V<<<<<R"
 		                       "#........A.V.....#"
 		                       "#........A<f>>>>>r"
 		                       "#######u##########");
@@ -1246,7 +1273,7 @@ int main(int numArguments, char** arguments)
 	for (int i = 0; i < 400; ++i)
 	{
 		Object* testObject = &objects[i];
-		testObject->type = 'U';
+		testObject->type = 'a';
 		testObject->body.position.x = (float)(rand() % c_spaceSize);
 		testObject->body.position.y = (float)(rand() % c_spaceSize);
 		testObject->body.velocity.x = (float)((rand() % 50) - 25);
