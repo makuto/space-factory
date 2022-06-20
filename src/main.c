@@ -914,7 +914,7 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 			SDL_Rect sourceRectangle = {textureX, textureY, c_tileSize, c_tileSize};
 			SDL_Rect destinationRectangle = {screenX, screenY, c_tileSize, c_tileSize};
 
-			if (mouseX >= destinationRectangle.x - (c_buttonMarginX / 2) &&
+			if (mouseX > destinationRectangle.x - (c_buttonMarginX / 2) &&
 			    mouseX <= destinationRectangle.x + destinationRectangle.w + (c_buttonMarginX / 2) &&
 			    mouseY >= destinationRectangle.y &&
 			    mouseY <= destinationRectangle.y + destinationRectangle.h)
