@@ -36,10 +36,6 @@ struct iVec2{
 //
 // Constants
 //
-//screen
-const int c_screenWidth = 1920;
-const int c_screenHeight = 1080;
-
 //space
 const int c_spaceSize = 10000;
 
@@ -306,35 +302,37 @@ static void setGridSpaceFromString(GridSpace* gridSpace, const char* str)
 	}
 }
 
-static void renderStarField(SDL_Renderer* renderer, Camera* camera)
+static void renderStarField(SDL_Renderer* renderer, Camera* camera, int windowWidth,
+                            int windowHeight)
 {
 	static SDL_FRect stars[128] = {0};
 	static SDL_FRect dynstars[128] = {0};
-	static bool starsInitialized = false;
-	if (!starsInitialized)
+	static int starsSizeX = 0;
+	static int starsSizeY = 0;
+	if (starsSizeX != windowWidth || starsSizeY != windowHeight)
 	{
+		starsSizeX = windowWidth;
+		starsSizeY = windowHeight;
 		for (int i = 0; i < ARRAY_SIZE(stars); ++i)
 		{
-			stars[i].x = rand() % c_screenWidth;
-			stars[i].y = rand() % c_screenHeight;
+			stars[i].x = rand() % starsSizeX;
+			stars[i].y = rand() % starsSizeY;
 			stars[i].w = rand() % 5 + 1;
 			stars[i].h = rand() % 5 + 1;
 			dynstars[i].w = stars[i].w;
 			dynstars[i].h = stars[i].h;
 		}
-		starsInitialized = true;
 	}
 
 	for (int i = 0; i < ARRAY_SIZE(stars); ++i)
 	{
-		dynstars[i].x = stars[i].x - camera->x/1000;
-		dynstars[i].y = stars[i].y - camera->y/1000;
+		dynstars[i].x = stars[i].x - camera->x / 1000;
+		dynstars[i].y = stars[i].y - camera->y / 1000;
 	}
 
 	SDL_SetRenderDrawColor(renderer, 128, 128, 128, 255);
 	SDL_RenderFillRectsF(renderer, dynstars, ARRAY_SIZE(dynstars));
 }
-
 
 //
 // Physics
@@ -992,8 +990,14 @@ static void doEndScreenSuccess(SDL_Renderer* renderer, TileSheet* tileSheet)
 {
 	const char* endScreenSuccess =
 		"YOU SUCCESSFULLY AVOIDED DETECTION\n\n"
-		"YOUR EXHAUSTED CREW CELEBRATES\n\n\n"
-		"BUT YOU KNOW THIS IS ONLY THE BEGINNING\n";
+		"YOUR EXHAUSTED CREW CELEBRATES\n\n"
+		"BUT YOU KNOW THIS IS ONLY THE BEGINNING\n"
+		"\n\n\n\n"
+		"THANK YOU FOR PLAYING\n\n"
+		"MACOY MADSON\n"
+		"WILL CHAMBERS\n\n"
+		"COPYRIGHT TWENTY TWENTY TWO\n"
+		"AVAILABLE UNDER TERMS OF GNU GENERAL PUBLIC LICENSE VERSION THREE\n";
 	renderText(renderer, tileSheet, 200, 200, endScreenSuccess);
 }
 
@@ -1063,11 +1067,12 @@ SDL_Rect scaleRectToMinimap(float x, float y, float w, float h){
 
 //MiniMap
 
-void renderMiniMap(SDL_Renderer * renderer,Vec2* playerPos, GridSpace* playerShip, Goal* goal){
-    
-
-    int miniMapX = c_screenWidth - 2*c_miniMapSize;
-    int miniMapY = c_screenHeight - c_miniMapSize;
+void renderMiniMap(SDL_Renderer* renderer, int windowWidth, int windowHeight, Vec2* playerPos,
+                   GridSpace* playerShip, Goal* goal)
+{
+	const int miniMapMargin = 10;
+	int miniMapX = windowWidth - c_miniMapSize - miniMapMargin;
+    int miniMapY = windowHeight - c_miniMapSize - miniMapMargin;
 
     SDL_Rect miniPlayer = scaleRectToMinimap(playerPos->x, playerPos->y, playerShip->width*c_tileSize, playerShip->height*c_tileSize);
     SDL_Rect miniGoal = scaleRectToMinimap(goal->x, goal->y, goal->w, goal->h);
@@ -1120,8 +1125,8 @@ int main(int numArguments, char** arguments)
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
 	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
 	SDL_Window* window = NULL;
-	int windowWidth = c_screenWidth;
-	int windowHeight = c_screenHeight;
+	int windowWidth = 1920;
+	int windowHeight = 1080;
 	if (!(sdlInitializeFor2d((&window), "Space Factory", windowWidth, windowHeight)))
 	{
 		fprintf(stderr, "Failed to initialize SDL\n");
@@ -1263,6 +1268,7 @@ int main(int numArguments, char** arguments)
 				exitReason = "Window event";
 			}
 		}
+		SDL_GetRendererOutputSize(renderer, &windowWidth, &windowHeight);
 		const Uint8* currentKeyStates = SDL_GetKeyboardState(NULL);
 		if (currentKeyStates[SDL_SCANCODE_ESCAPE])
 		{
@@ -1341,7 +1347,7 @@ int main(int numArguments, char** arguments)
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		SDL_RenderClear(renderer);
 
-		renderStarField(renderer, &camera);
+		renderStarField(renderer, &camera, windowWidth, windowHeight);
 
 		renderGridSpaceFromTileSheet(playerShip, playerPhys.position.x, playerPhys.position.y,
 		                             renderer, &tileSheet, &camera);
@@ -1350,7 +1356,7 @@ int main(int numArguments, char** arguments)
 
         renderGoal(renderer,&camera,&goal);
 
-        renderMiniMap(renderer,&playerPhys.position,playerShip,&goal);
+        renderMiniMap(renderer, windowWidth, windowHeight, &playerPhys.position,playerShip,&goal);
 
         if(CheckGoalSatisfied(&playerPhys.position,playerShip,&goal)){
             exitReason = "Achieved Goal!";
@@ -1366,8 +1372,8 @@ int main(int numArguments, char** arguments)
 			if (playerVelocity >= (int)c_maxSpeed)
 				renderText(renderer, &tileSheet, 100, 120, "WARNING MAX VELOCITY REACHED");
 
-			doTutorial(renderer, &tileSheet);
-			/* doEndScreenSuccess(renderer, &tileSheet); */
+			/* doTutorial(renderer, &tileSheet); */
+			doEndScreenSuccess(renderer, &tileSheet);
 		}
 
 		Vec2 cameraPosition = {(float)camera.x, (float)camera.y};
