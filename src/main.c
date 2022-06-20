@@ -719,7 +719,7 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
 				if (playerPhys->velocity.x < 0 && shipTileX == 0)
 				{
 					currentObject->body.velocity.x = playerPhys->velocity.x * 1.2f;
-					playerPhys->velocity.x -= 10.f;
+					playerPhys->velocity.x += 10.f;
 				}
 			}
 			if (objShipLocalX > 0 && objShipLocalX <= playerShipData->width)
@@ -733,7 +733,7 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
 				if (playerPhys->velocity.y < 0 && (int)objShipLocalY == 0)
 				{
 					currentObject->body.velocity.y = playerPhys->velocity.y * 1.2f;
-					playerPhys->velocity.y -= 10.f;
+					playerPhys->velocity.y += 10.f;
 				}
 			}
 		}
