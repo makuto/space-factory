@@ -1077,6 +1077,9 @@ void renderMiniMap(SDL_Renderer * renderer,Vec2* playerPos, GridSpace* playerShi
 
     miniGoal.x +=miniMapX;
     miniGoal.y +=miniMapY;
+    miniGoal.w = 4; 
+    miniGoal.h = 4; 
+
 
     SDL_Rect miniMapBounds = {miniMapX,miniMapY, c_miniMapSize, c_miniMapSize};
     SDL_SetRenderDrawColor(renderer,0,0,0,255);
@@ -1091,6 +1094,19 @@ void renderMiniMap(SDL_Renderer * renderer,Vec2* playerPos, GridSpace* playerShi
     SDL_RenderFillRect(renderer, &miniGoal);
 
     SDL_SetRenderDrawColor(renderer,0,0,0,255);
+
+	for (int i = 0; i < ARRAY_SIZE(objects); i++)
+	{
+		Object* currentObject = &objects[i];
+		if (!currentObject->type)
+    		continue;
+        iVec2 miniMapObjPos = toMiniMapCoordinates(currentObject->body.position.x, currentObject->body.position.y);
+        miniMapObjPos.x +=miniMapX;
+        miniMapObjPos.y +=miniMapY;
+        SDL_Rect miniObj = {miniMapObjPos.x, miniMapObjPos.y,4,4};
+        SDL_SetRenderDrawColor(renderer,0,0,255,255);
+        SDL_RenderFillRect(renderer, &miniObj);
+    }
 }
 
 //
