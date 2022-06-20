@@ -1048,7 +1048,7 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 
 			// Make the placement
 			inventory[currentSelectedButtonIndex] -= 1;
-			memset(selectedCell, sizeof(GridCell), 0);
+			memset(selectedCell, 0, sizeof(GridCell));
 			selectedCell->type = editButtons[currentSelectedButtonIndex];
 		}
 	}
