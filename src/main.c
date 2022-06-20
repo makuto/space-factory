@@ -31,9 +31,19 @@ struct Vec2
 //
 // Constants
 //
+//screen
+const int c_screenWidth = 1920;
+const int c_screenHeight = 1080;
 
-// Rendering
+//space
+const int c_spaceSize = 10000;
 
+//goal
+const int c_goalSize = 40;
+
+
+//minimap 
+const int c_miniMapSize = 400;
 //
 // Camera
 //
@@ -300,8 +310,8 @@ static void renderStarField(SDL_Renderer* renderer, Camera* camera)
 	{
 		for (int i = 0; i < ARRAY_SIZE(stars); ++i)
 		{
-			stars[i].x = rand() % 1920;
-			stars[i].y = rand() % 1080;
+			stars[i].x = rand() % c_screenWidth;
+			stars[i].y = rand() % c_screenHeight;
 			stars[i].w = rand() % 5 + 1;
 			stars[i].h = rand() % 5 + 1;
 			dynstars[i].w = stars[i].w;
@@ -319,6 +329,7 @@ static void renderStarField(SDL_Renderer* renderer, Camera* camera)
 	SDL_SetRenderDrawColor(renderer, 128, 128, 128, 255);
 	SDL_RenderFillRectsF(renderer, dynstars, ARRAY_SIZE(dynstars));
 }
+
 
 //
 // Physics
@@ -709,8 +720,7 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
 					    (shipTileY * c_tileSize) + playerPhys->position.y;
 					currentObject->body.velocity.x = 0;
 					currentObject->body.velocity.y = 0;
-					currentObject->tileX = shipTileX;
-					currentObject->tileY = shipTileY;
+					currentObject->tileX = shipTileX; currentObject->tileY = shipTileY;
 					currentObject->inFactory = true;
 				}
 			}
@@ -930,16 +940,71 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 //for now just a simple rect
 //
 
+typedef SDL_Rect Goal;
 
+static void renderGoal(SDL_Renderer* renderer, Camera* camera, Goal* goal){
 
-static void renderGoal(SDL_Renderer* renderer, Camera* camera, SDL_Rect* goal){
-
+        SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+        SDL_Rect goalVis = {(int)(goal->x - camera->x),(int) ((float)goal->y - camera->y), (int)goal->w, (int)goal->h};
+        SDL_RenderFillRect(renderer, &goalVis);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 }
 
-void CheckGoalSatisfied(Vec2* PlayerPos, GridSpace* PlayerShip){
-
+bool pointInRect(Vec2* point, SDL_Rect * rect){
+    return point->x > rect->x && point->x < (rect->x+rect->w) 
+            &&point->y > rect->y && point->y < (rect->y+rect->h);
 }
 
+bool CheckGoalSatisfied(Vec2* playerPos, GridSpace* playerShip,Goal * goal){
+    //aligned box collision WILL BREAK IF WE EVER ROTATE ANYTHING
+    Vec2 goalTL = {(float) goal->x, (float)goal->y};
+    Vec2 goalTR = {(float)(goal->x + goal->w),(float) goal->y};
+    Vec2 goalBL = {(float )goal->x, (float)(goal->y + goal->h)};
+    Vec2 goalBR = {(float)(goal->x+goal->w), (float)(goal->y + goal->h)};
+
+    int playerWidth =  playerShip->width*c_tileSize;
+    int playerHeight =  playerShip->height*c_tileSize;
+
+    Vec2 playerTR = {(playerPos->x + playerWidth), (float)playerPos->y};
+    Vec2 playerBL = {(float)playerPos->x, (float)(playerPos->y + playerHeight)};
+    Vec2 playerBR = {(float)(playerPos->x + playerWidth),(float) (playerPos->y + playerHeight)};
+
+
+    SDL_Rect playerBoundingBox = {(int)playerPos->x, (int)playerPos->y, playerWidth, playerHeight };
+
+
+    return pointInRect(&goalTL,&playerBoundingBox) || pointInRect(&goalTR,&playerBoundingBox)
+        || pointInRect(&goalBL, &playerBoundingBox) || pointInRect(&goalBR,&playerBoundingBox)||
+        pointInRect(playerPos,goal) || pointInRect(&playerTR,goal) || pointInRect(&playerBL,goal) 
+        || pointInRect(&playerBR,goal);
+     
+}
+
+
+//MiniMap
+
+void renderMiniMap(SDL_Renderer * renderer,Vec2* playerPos, GridSpace* playerShip, Goal* goal){
+
+    int playerWidth =  playerShip->width*c_tileSize;
+    int playerHeight =  playerShip->height*c_tileSize;
+    int miniMapX = c_screenWidth - 2*c_miniMapSize;
+    int miniMapY = c_screenHeight - c_miniMapSize;
+    float miniMapScale = c_miniMapSize/c_spaceSize;
+
+    SDL_Rect miniPlayer = {(int) (playerPos->x * miniMapScale)+miniMapX, (int)(playerPos->y * miniMapScale) +miniMapY, (int) (playerWidth*miniMapScale), (int) (playerHeight*miniMapScale) };
+
+    SDL_Rect miniMapBounds = {miniMapX,miniMapY, c_miniMapSize, c_miniMapSize};
+    SDL_SetRenderDrawColor(renderer,0,0,0,255);
+    SDL_RenderFillRect(renderer, &miniMapBounds);
+    SDL_SetRenderDrawColor(renderer,255,255,255,255);
+    SDL_RenderDrawRect(renderer, &miniMapBounds);
+
+    SDL_SetRenderDrawColor(renderer,255,0,0,255);
+    SDL_RenderFillRect(renderer, &miniPlayer);
+    SDL_SetRenderDrawColor(renderer,0,0,0,255);
+}
+
+//
 //
 // Main
 //
@@ -950,8 +1015,8 @@ int main(int numArguments, char** arguments)
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
 	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
 	SDL_Window* window = NULL;
-	int windowWidth = 1920;
-	int windowHeight = 1080;
+	int windowWidth = c_screenWidth;
+	int windowHeight = c_screenHeight;
 	if (!(sdlInitializeFor2d((&window), "Space Factory", windowWidth, windowHeight)))
 	{
 		fprintf(stderr, "Failed to initialize SDL\n");
@@ -976,6 +1041,7 @@ int main(int numArguments, char** arguments)
 	// Load tile sheet into texture
 	SDL_Texture* tileSheetTexture = NULL;
 	{
+#define NO_DATA_BUNDLE
 #ifdef NO_DATA_BUNDLE
 		SDL_Surface* tileSheetSurface = SDL_LoadBMP("assets/TileSheet.bmp");
 #else
@@ -1056,6 +1122,12 @@ int main(int numArguments, char** arguments)
 	camera.y = playerPhys.position.y - (windowHeight / 2) + (playerShipData.height * c_tileSize) / 2;
 	camera.w = windowWidth;
 	camera.h = windowHeight;
+
+    Goal goal;
+    goal.x = rand() % c_spaceSize;
+    goal.y = rand() % c_spaceSize;
+    goal.w = c_goalSize;
+    goal.h = c_goalSize;
 
 	// Make some objects
 	for (int i = 0; i < 40; ++i)
@@ -1160,7 +1232,6 @@ int main(int numArguments, char** arguments)
 
 		doFactory(playerShip, deltaTime);
 		snapCameraToGrid(&camera, &playerPhys.position, playerShip, deltaTime);
-
 		// Rendering
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		SDL_RenderClear(renderer);
@@ -1171,6 +1242,14 @@ int main(int numArguments, char** arguments)
 		                             renderer, &tileSheet, &camera);
 
 		renderObjects(renderer, &tileSheet, &camera);
+
+        renderGoal(renderer,&camera,&goal);
+
+        renderMiniMap(renderer,&playerPhys.position,playerShip,&goal);
+
+        if(CheckGoalSatisfied(&playerPhys.position,playerShip,&goal)){
+            exitReason = "Achieved Goal!";
+        }
 
 		// HUD
 		{
