@@ -1364,6 +1364,23 @@ int main(int numArguments, char** arguments)
 	goal.w = c_goalSize;
 	goal.h = c_goalSize;
 
+	typedef struct GamePhase
+	{
+		const char* prompt;
+		int timeToCompleteSeconds;
+	} GamePhase;
+	GamePhase gamePhases[] = {
+	    {"CONSTRUCT YOUR SHIP", 60},     {"ENEMY RADAR SIGNAL DETECTED", 3},
+	    {"REACH RADAR DEADZONE 1", 20},  {"REACH RADAR DEADZONE 2", 18},
+	    {"ENEMY RADAR COOLING DOWN", 3}, {"MODIFY YOUR SHIP", 60},
+	    {"REACH RADAR DEADZONE 3", 15},  {"REACH RADAR DEADZONE 4", 10},
+	    {"REACH RADAR DEADZONE 5", 5},
+	};
+	int currentGamePhase = 0;
+	const Uint64 performanceNumTicksPerSecond = SDL_GetPerformanceFrequency();
+	Uint64 gamePhaseStartTicks = SDL_GetPerformanceCounter();
+	int sinceStartSeconds = gamePhaseStartTicks / performanceNumTicksPerSecond;
+
 	// Make some objects
 	for (int i = 0; i < 400; ++i)
 	{
@@ -1377,7 +1394,6 @@ int main(int numArguments, char** arguments)
 
 	// Main loop
 	Uint64 lastFrameNumTicks = SDL_GetPerformanceCounter();
-	const Uint64 performanceNumTicksPerSecond = SDL_GetPerformanceFrequency();
 	const char* exitReason = NULL;
 	while (!(exitReason))
 	{
@@ -1498,10 +1514,28 @@ int main(int numArguments, char** arguments)
 			// This is a bit weird, but informs the player that they will just waste fuel if they
 			// keep burning in that direction
 			if (playerVelocity >= (int)c_maxSpeed)
-				renderText(renderer, &tileSheet, 100, 120, "WARNING MAX VELOCITY REACHED");
+				renderText(renderer, &tileSheet, 100, 60, "WARNING   MAX VELOCITY REACHED");
+
+			Uint64 currentGamePhaseTicks = SDL_GetPerformanceCounter();
+			int currentSeconds = currentGamePhaseTicks / performanceNumTicksPerSecond;
+			int phaseSeconds = 0;
+			for (int i = 0; i < ARRAY_SIZE(gamePhases); ++i)
+			{
+				GamePhase* phase = &gamePhases[i];
+				if (currentSeconds <
+				    phase->timeToCompleteSeconds + phaseSeconds + sinceStartSeconds)
+				{
+					renderText(renderer, &tileSheet, 100, 120, phase->prompt);
+					renderNumber(renderer, &tileSheet, 100, 140,
+					             (phase->timeToCompleteSeconds + phaseSeconds + sinceStartSeconds) -
+					                 currentSeconds);
+					break;
+				}
+				phaseSeconds += phase->timeToCompleteSeconds;
+			}
 
 			/* doTutorial(renderer, &tileSheet); */
-			doEndScreenSuccess(renderer, &tileSheet);
+			/* doEndScreenSuccess(renderer, &tileSheet); */
 		}
 
 		Vec2 cameraPosition = {(float)camera.x, (float)camera.y};
