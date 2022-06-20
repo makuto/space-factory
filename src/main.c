@@ -885,6 +885,27 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 	                                  "INTAKE LEFT", "INTAKE RIGHT", "INTAKE UP", "INTAKE DOWN",
 	                                  // Engines
 	                                  "ENGINE LEFT", "ENGINE RIGHT", "ENGINE UP", "ENGINE DOWN"};
+	typedef enum PlacementRestriction
+	{
+		Restrict_None,
+		Restrict_Inside,
+		Restrict_EdgeAny,
+		Restrict_EdgeLeft,
+		Restrict_EdgeRight,
+		Restrict_EdgeTop,
+		Restrict_EdgeBottom,
+	} PlacementRestriction;
+	static PlacementRestriction restrictions[] = {
+	    /*WALL*/ Restrict_EdgeAny, /*FLOOR*/ Restrict_Inside, /*CONVEYOR LEFT*/ Restrict_Inside,
+	    /*CONVEYOR RIGHT*/ Restrict_Inside,
+	    /*CONVEYOR UP*/ Restrict_Inside, /*CONVEYOR DOWN*/ Restrict_Inside,
+	    /*REFINERY*/ Restrict_Inside,
+	    // Intakes
+	    /*INTAKE LEFT*/ Restrict_EdgeLeft, /*INTAKE RIGHT*/ Restrict_EdgeRight,
+	    /*INTAKE UP*/ Restrict_EdgeTop, /*INTAKE DOWN*/ Restrict_EdgeBottom,
+	    // Engines
+	    /*ENGINE LEFT*/ Restrict_EdgeLeft, /*ENGINE RIGHT*/ Restrict_EdgeRight,
+	    /*ENGINE UP*/ Restrict_EdgeBottom, /*ENGINE DOWN*/ Restrict_EdgeTop};
 	static unsigned short inventory[] = {/*'#'=*/100, /*'.'=*/999, /*'<'=*/100, /*'>'=*/100,
 	                                     /*'A'=*/100, /*'V'=*/100, /*'f'=*/8,   /*'L'=*/8,
 	                                     /*'R'=*/8,   /*'U'=*/8,   /*'D'=*/8,
@@ -976,7 +997,43 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 			break;
 		}
 
-		if (mouseButtonState & SDL_BUTTON_LMASK && inventory[currentSelectedButtonIndex] &&
+		bool isValidPlacement = true;
+		{
+			switch (restrictions[currentSelectedButtonIndex])
+			{
+				case Restrict_None:
+					break;
+				case Restrict_Inside:
+					if (selectedCellX == 0 || selectedCellX == editGridSpace->width - 1 ||
+					    selectedCellY == 0 || selectedCellY == editGridSpace->height - 1)
+						isValidPlacement = false;
+					break;
+				case Restrict_EdgeAny:
+					if ((selectedCellX != 0 && selectedCellX != editGridSpace->width - 1) &&
+					    (selectedCellY != 0 && selectedCellY != editGridSpace->height - 1))
+						isValidPlacement = false;
+					break;
+				case Restrict_EdgeLeft:
+					if (selectedCellX != 0)
+						isValidPlacement = false;
+					break;
+				case Restrict_EdgeRight:
+					if (selectedCellX != editGridSpace->width - 1)
+						isValidPlacement = false;
+					break;
+				case Restrict_EdgeTop:
+					if (selectedCellY != 0)
+						isValidPlacement = false;
+					break;
+				case Restrict_EdgeBottom:
+					if (selectedCellY != editGridSpace->height - 1)
+						isValidPlacement = false;
+					break;
+			}
+		}
+
+		if (isValidPlacement && mouseButtonState & SDL_BUTTON_LMASK &&
+		    inventory[currentSelectedButtonIndex] &&
 		    selectedCell->type != editButtons[currentSelectedButtonIndex])
 		{
 			// Give back resources
