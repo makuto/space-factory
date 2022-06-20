@@ -1364,17 +1364,27 @@ int main(int numArguments, char** arguments)
 	goal.w = c_goalSize;
 	goal.h = c_goalSize;
 
+	typedef enum Objective
+	{
+		Objective_None,
+		Objective_ReachGoalPoint,
+	} Objective;
 	typedef struct GamePhase
 	{
 		const char* prompt;
 		int timeToCompleteSeconds;
+		Objective requirement;
 	} GamePhase;
 	GamePhase gamePhases[] = {
-	    {"CONSTRUCT YOUR SHIP", 60},          {"ENEMY RADAR SIGNAL DETECTED", 3},
-	    {"REACH RADAR DEADZONE ALPHA", 20},   {"REACH RADAR DEADZONE BRAVO", 18},
-	    {"ENEMY RADAR OVERHEATED", 3},        {"MODIFY YOUR SHIP", 60},
-	    {"REACH RADAR DEADZONE CHARLIE", 15}, {"REACH RADAR DEADZONE DELTA", 10},
-	    {"REACH RADAR DEADZONE ECHO", 5},
+	    {"CONSTRUCT YOUR SHIP", 60, Objective_None},
+	    {"ENEMY RADAR SIGNAL DETECTED", 3, Objective_None},
+	    {"REACH RADAR DEADZONE ALPHA", 20, Objective_ReachGoalPoint},
+	    {"REACH RADAR DEADZONE BRAVO", 18, Objective_ReachGoalPoint},
+	    {"ENEMY RADAR OVERHEATED", 3, Objective_None},
+	    {"MODIFY YOUR SHIP", 60, Objective_None},
+	    {"REACH RADAR DEADZONE CHARLIE", 15, Objective_ReachGoalPoint},
+	    {"REACH RADAR DEADZONE DELTA", 10, Objective_ReachGoalPoint},
+	    {"REACH RADAR DEADZONE ECHO", 5, Objective_ReachGoalPoint},
 	};
 	int currentGamePhase = 0;
 	const Uint64 performanceNumTicksPerSecond = SDL_GetPerformanceFrequency();
