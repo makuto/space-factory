@@ -42,6 +42,7 @@ const int c_screenHeight = 1080;
 
 //space
 const int c_spaceSize = 10000;
+const int c_spawnBuffer = 100;
 
 //goal
 const int c_goalSize = 40;
@@ -380,8 +381,8 @@ void UpdatePhysics(RigidBody* object, float drag, float dt)
 RigidBody SpawnPlayerPhys()
 {
 	RigidBody player;
-	player.position.x = 100.f;
-	player.position.y = 100.f;
+	player.position.x = c_spaceSize/2;
+	player.position.y = c_spaceSize/2;
 	player.velocity.x = 0.f;
 	player.velocity.y = 0.f;
 	return player;
@@ -618,6 +619,11 @@ void snapCameraToGrid(Camera* camera, Vec2* position, GridSpace* grid, float del
 	// compute grid center
 	float x = position->x + (grid->width * c_tileSize) / 2;
 	float y = position->y + (grid->height * c_tileSize) / 2;
+
+    if((camera->x - x - camera->w/2) > 10 ||(camera->y - y -camera->h/2) > 10 ){
+        camera->x = (x - camera->w/2);
+        camera->y = (y - camera->h/2);
+    }
 
 	float cameraOffsetX = (camera->w / 2.f);
 	float cameraOffsetY = (camera->h / 2.f);
@@ -1066,7 +1072,7 @@ SDL_Rect scaleRectToMinimap(float x, float y, float w, float h){
 void renderMiniMap(SDL_Renderer * renderer,Vec2* playerPos, GridSpace* playerShip, Goal* goal){
     
 
-    int miniMapX = c_screenWidth - 2*c_miniMapSize;
+    int miniMapX = c_screenWidth - 1.5*c_miniMapSize;
     int miniMapY = c_screenHeight - c_miniMapSize;
 
     SDL_Rect miniPlayer = scaleRectToMinimap(playerPos->x, playerPos->y, playerShip->width*c_tileSize, playerShip->height*c_tileSize);
@@ -1353,7 +1359,8 @@ int main(int numArguments, char** arguments)
         renderMiniMap(renderer,&playerPhys.position,playerShip,&goal);
 
         if(CheckGoalSatisfied(&playerPhys.position,playerShip,&goal)){
-            exitReason = "Achieved Goal!";
+            goal.x = rand() % (c_spaceSize - c_spawnBuffer);
+            goal.y = rand() % (c_spaceSize - c_spawnBuffer);
         }
 
 		// HUD
