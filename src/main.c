@@ -1150,10 +1150,6 @@ SDL_Rect scaleRectToMinimap(float x, float y, float w, float h)
 	return {miniMapXY.x, miniMapXY.y, miniMapWH.x, miniMapWH.y};
 }
 
-    int miniMapX = c_screenWidth - 1.5*c_miniMapSize;
-    int miniMapY = c_screenHeight - c_miniMapSize;
-// MiniMap
-
 void renderMiniMap(SDL_Renderer* renderer, int windowWidth, int windowHeight, Vec2* playerPos,
                    GridSpace* playerShip, Goal* goal)
 {
