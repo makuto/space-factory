@@ -851,12 +851,14 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 	static unsigned short inventory[] = {/*'#'=*/100, /*'.'=*/999, /*'<'=*/100, /*'>'=*/100,
 	                                     /*'A'=*/100, /*'V'=*/100, /*'f'=*/8,   /*'c'=*/8,
 	                                     /*'l'=*/8,   /*'r'=*/8,   /*'u'=*/8,   /*'d'=*/8};
-	int buttonMarginX = 5;
+	const int c_buttonMarginX = 22;
 	int startButtonBarX =
-	    ((windowWidth / 2) - ((ARRAY_SIZE(editButtons) * (c_tileSize + buttonMarginX)) / 2));
-	int buttonBarY = 32;
+	    ((windowWidth / 2) - ((ARRAY_SIZE(editButtons) * (c_tileSize + c_buttonMarginX)) / 2));
+	const int buttonBarY = 32;
+	const int c_numberMargin = 8;
+	const int c_toolTipMargin = 28;
 
-	renderText(renderer, tileSheet, startButtonBarX, buttonBarY - 18, "INVENTORY");
+	renderText(renderer, tileSheet, startButtonBarX, buttonBarY - 25, "INVENTORY");
 
 	for (int buttonIndex = 0; buttonIndex < ARRAY_SIZE(editButtons); ++buttonIndex)
 	{
@@ -869,13 +871,13 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 
 			int textureX = association->column * c_tileSize;
 			int textureY = association->row * c_tileSize;
-			int screenX = startButtonBarX + (buttonIndex * (c_tileSize + buttonMarginX));
+			int screenX = startButtonBarX + (buttonIndex * (c_tileSize + c_buttonMarginX));
 			int screenY = buttonBarY;
 			SDL_Rect sourceRectangle = {textureX, textureY, c_tileSize, c_tileSize};
 			SDL_Rect destinationRectangle = {screenX, screenY, c_tileSize, c_tileSize};
 
-			if (mouseX >= destinationRectangle.x &&
-			    mouseX <= destinationRectangle.x + destinationRectangle.w &&
+			if (mouseX >= destinationRectangle.x - (c_buttonMarginX / 2) &&
+				mouseX <= destinationRectangle.x + destinationRectangle.w + (c_buttonMarginX / 2) &&
 			    mouseY >= destinationRectangle.y &&
 			    mouseY <= destinationRectangle.y + destinationRectangle.h)
 			{
@@ -884,7 +886,7 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 
 				drawOutlineRectangle(renderer, &destinationRectangle, mouseButtonState);
 
-				renderText(renderer, tileSheet, screenX, screenY + c_tileSize + 18,
+				renderText(renderer, tileSheet, screenX, screenY + c_tileSize + c_toolTipMargin,
 				           editButtonLabels[buttonIndex]);
 			}
 			else if (currentSelectedButtonIndex == buttonIndex)
@@ -898,7 +900,7 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 			                 /*rotate about (default = center)*/ NULL,
 			                 c_transformsToSDLRenderFlips[association->transform]);
 
-			renderNumber(renderer, tileSheet, screenX, screenY + c_tileSize + 5,
+			renderNumber(renderer, tileSheet, screenX, screenY + c_tileSize + c_numberMargin,
 			             inventory[buttonIndex]);
 			break;
 		}
