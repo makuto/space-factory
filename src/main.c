@@ -1235,12 +1235,12 @@ int main(int numArguments, char** arguments)
     goal.h = c_goalSize;
 
 	// Make some objects
-	for (int i = 0; i < 40; ++i)
+	for (int i = 0; i < 400; ++i)
 	{
 		Object* testObject = &objects[i];
 		testObject->type = 'U';
-		testObject->body.position.x = (float)(rand() % windowWidth) + 700;
-		testObject->body.position.y = (float)(rand() % windowHeight);
+		testObject->body.position.x = (float)(rand() % c_spaceSize);
+		testObject->body.position.y = (float)(rand() % c_spaceSize);
 		testObject->body.velocity.x = (float)((rand() % 50) - 25);
 		testObject->body.velocity.y = (float)((rand() % 50) - 25);
 	}
