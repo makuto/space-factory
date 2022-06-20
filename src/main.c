@@ -549,7 +549,7 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 					{
 						Object* currentObject = &objects[i];
 						if (!currentObject->type || currentObject->tileX != cellX ||
-						    currentObject->tileY != cellY)
+						    currentObject->tileY != cellY || !currentObject->inFactory)
 							continue;
 
 						// TODO This isn't very safe because if <1, the object will never transition
@@ -576,7 +576,7 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 					{
 						Object* currentObject = &objects[i];
 						if (!currentObject->type || currentObject->tileX != cellX ||
-						    currentObject->tileY != cellY)
+						    currentObject->tileY != cellY || !currentObject->inFactory)
 							continue;
 
 						// Move objects along which aren't unrefined the same speed as a conveyor
@@ -603,7 +603,7 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 					{
 						Object* currentObject = &objects[i];
 						if (!currentObject->type || currentObject->tileX != cellX ||
-						    currentObject->tileY != cellY)
+						    currentObject->tileY != cellY || !currentObject->inFactory)
 							continue;
 
 						// Only refined objects will give fuel; everything else just gets destroyed
@@ -1042,10 +1042,7 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 
 			// Make the placement
 			inventory[currentSelectedButtonIndex] -= 1;
-			/* memset(selectedCell, sizeof(GridCell), 0); */
-			assert(selectedCell >= editGridSpace->data &&
-			       selectedCell <
-			           editGridSpace->data + (editGridSpace->width * editGridSpace->height));
+			memset(selectedCell, sizeof(GridCell), 0);
 			selectedCell->type = editButtons[currentSelectedButtonIndex];
 		}
 	}
