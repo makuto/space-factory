@@ -703,7 +703,7 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
 			cell = GridCellAt(playerShipData, shipTileX, shipTileY);
 
 		// otherwise check collisions with solid tiles, and update accordingly
-		if (cell.type == '#' || isEngineTile(cell.type))
+		if (cell.type)
 		{
 			if (objShipLocalY > 0 && objShipLocalY <= playerShipData->height)
 			{
