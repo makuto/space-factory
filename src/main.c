@@ -779,21 +779,37 @@ static void renderText(SDL_Renderer* renderer, TileSheet* tileSheet, int x, int 
 	const int c_fontStartY = 99;
 	const int c_fontWidth = 7;
 	const int c_fontHeight = 10;
+	const int c_scaledFontWidth = c_fontWidth * 2;
+	const int c_scaledFontHeight = c_fontHeight * 2;
 	const int c_charactersPerRow = 18;
 	const int c_fontVerticalSpace = 5;
+	int currentX = 0;
+	int currentY = 0;
 	for (const char* read = text; *read; ++read)
 	{
+		if (*read == '\n')
+		{
+			currentY += c_scaledFontHeight + c_fontVerticalSpace;
+			currentX = 0;
+			continue;
+		}
 		// Only uppercase
 		if (*read < 'A' || *read > 'Z')
+		{
+			currentX += c_scaledFontWidth;
 			continue;
+		}
+
 		char index = *read - 'A';
 		int textureX = c_fontStartX + ((index % c_charactersPerRow) * c_fontWidth);
 		int textureY = c_fontStartY + ((index / c_charactersPerRow) * (c_fontHeight + c_fontVerticalSpace));
-		int screenX = x + ((read - text) * c_fontWidth);
-		int screenY = y;
+		int screenX = currentX + x;
+		int screenY = currentY + y;
 		SDL_Rect sourceRectangle = {textureX, textureY, c_fontWidth, c_fontHeight};
-		SDL_Rect destinationRectangle = {screenX, screenY, c_fontWidth, c_fontHeight};
+		SDL_Rect destinationRectangle = {screenX, screenY, c_scaledFontWidth, c_scaledFontHeight};
 		SDL_RenderCopy(renderer, tileSheet->texture, &sourceRectangle, &destinationRectangle);
+
+		currentX += c_scaledFontWidth;
 	}
 }
 
@@ -806,14 +822,16 @@ static void renderNumber(SDL_Renderer* renderer, TileSheet* tileSheet, int x, in
 	const int c_fontStartY = 114;
 	const int c_fontWidth = 7;
 	const int c_fontHeight = 10;
+	const int c_scaledFontWidth = c_fontWidth * 1.5f;
+	const int c_scaledFontHeight = c_fontHeight * 1.5f;
 	for (const char* read = numberBuffer; *read; ++read)
 	{
 		int textureX = c_fontStartX + ((*read - '0') * c_fontWidth);
 		int textureY = c_fontStartY;
-		int screenX = x + ((read - numberBuffer) * c_fontWidth);
+		int screenX = x + ((read - numberBuffer) * c_scaledFontWidth);
 		int screenY = y;
 		SDL_Rect sourceRectangle = {textureX, textureY, c_fontWidth, c_fontHeight};
-		SDL_Rect destinationRectangle = {screenX, screenY, c_fontWidth, c_fontHeight};
+		SDL_Rect destinationRectangle = {screenX, screenY, c_scaledFontWidth, c_scaledFontHeight};
 		SDL_RenderCopy(renderer, tileSheet->texture, &sourceRectangle, &destinationRectangle);
 	}
 }
@@ -934,6 +952,30 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 			selectedCell->type = editButtons[currentSelectedButtonIndex];
 		}
 	}
+}
+
+static void doTutorial(SDL_Renderer* renderer, TileSheet* tileSheet)
+{
+	// No sci-fi game is complete without some cheese
+	const char* tutorialText =
+		"FREEDOM, CURIOSITY, SHARED DESTINY:\n"
+		"THE CONGLOMERATE IS NOT HAPPY WITH YOU SPREADING THESE IDEALS\n\n\n"
+		"YOU MUST REFINE ASTEROIDS INTO FUEL\n"
+	    "FUEL YOUR ENGINES TO MANEUVER THE SHIP\n\n"
+		"CUSTOMIZE YOUR FACTORY TO MAXIMIZE EFFICIENCY\n"
+		"EVERY SECOND COUNTS\n"
+	    "REACH THE TARGET LOCATIONS IN TIME TO AVOID DETECTION\n\n\n"
+		"YOUR CREW DEPENDS ON YOU\n";
+	renderText(renderer, tileSheet, 200, 200, tutorialText);
+}
+
+static void doEndScreenSuccess(SDL_Renderer* renderer, TileSheet* tileSheet)
+{
+	const char* endScreenSuccess =
+		"YOU SUCCESSFULLY AVOIDED DETECTION\n\n"
+		"YOUR EXHAUSTED CREW CELEBRATES\n\n\n"
+		"BUT YOU KNOW THIS IS ONLY THE BEGINNING\n";
+	renderText(renderer, tileSheet, 200, 200, endScreenSuccess);
 }
 
 //Goal
@@ -1260,6 +1302,9 @@ int main(int numArguments, char** arguments)
 			// keep burning in that direction
 			if (playerVelocity >= (int)c_maxSpeed)
 				renderText(renderer, &tileSheet, 100, 120, "WARNING MAX VELOCITY REACHED");
+
+			doTutorial(renderer, &tileSheet);
+			/* doEndScreenSuccess(renderer, &tileSheet); */
 		}
 
 		Vec2 cameraPosition = {(float)camera.x, (float)camera.y};
