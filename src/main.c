@@ -28,6 +28,11 @@ struct Vec2
 	float y;
 };
 
+struct iVec2{
+    int x;
+    int y;
+};
+
 //
 // Constants
 //
@@ -358,6 +363,18 @@ void UpdatePhysics(RigidBody* object, float drag, float dt)
 
 	object->position.x += object->velocity.x * dt;
 	object->position.y += object->velocity.y * dt;
+    
+    if(object->position.x > c_spaceSize)
+        object->position.x = 0;
+
+    if(object->position.x < 0)
+        object->position.x = c_spaceSize;
+
+    if(object->position.y > c_spaceSize)
+        object->position.y = 0;
+
+    if(object->position.y < 0)
+        object->position.y = c_spaceSize;
 }
 
 RigidBody SpawnPlayerPhys()
@@ -981,17 +998,41 @@ bool CheckGoalSatisfied(Vec2* playerPos, GridSpace* playerShip,Goal * goal){
 }
 
 
+iVec2 toMiniMapCoordinates(float worldCoordX, float worldCoordY){
+    float nWorldCoordX = worldCoordX/c_spaceSize;
+    float nWorldCoordY = worldCoordY/c_spaceSize;
+    return {(int)(nWorldCoordX*c_miniMapSize), (int)(nWorldCoordY*c_miniMapSize)};
+}
+
+SDL_Rect scaleRectToMinimap(float x, float y, float w, float h){
+    iVec2 miniMapXY = toMiniMapCoordinates(x,y);
+    iVec2 miniMapWH = toMiniMapCoordinates(w,h);
+
+    if(miniMapWH.x == 0)
+        miniMapWH.x = 1;
+
+    if(miniMapWH.y == 0)
+        miniMapWH.y = 1;
+        
+    return {miniMapXY.x, miniMapXY.y, miniMapWH.x, miniMapWH.y};
+}
+
 //MiniMap
 
 void renderMiniMap(SDL_Renderer * renderer,Vec2* playerPos, GridSpace* playerShip, Goal* goal){
+    
 
-    int playerWidth =  playerShip->width*c_tileSize;
-    int playerHeight =  playerShip->height*c_tileSize;
     int miniMapX = c_screenWidth - 2*c_miniMapSize;
     int miniMapY = c_screenHeight - c_miniMapSize;
-    float miniMapScale = c_miniMapSize/c_spaceSize;
 
-    SDL_Rect miniPlayer = {(int) (playerPos->x * miniMapScale)+miniMapX, (int)(playerPos->y * miniMapScale) +miniMapY, (int) (playerWidth*miniMapScale), (int) (playerHeight*miniMapScale) };
+    SDL_Rect miniPlayer = scaleRectToMinimap(playerPos->x, playerPos->y, playerShip->width*c_tileSize, playerShip->height*c_tileSize);
+    SDL_Rect miniGoal = scaleRectToMinimap(goal->x, goal->y, goal->w, goal->h);
+
+    miniPlayer.x +=miniMapX;
+    miniPlayer.y += miniMapY;
+
+    miniGoal.x +=miniMapX;
+    miniGoal.y +=miniMapY;
 
     SDL_Rect miniMapBounds = {miniMapX,miniMapY, c_miniMapSize, c_miniMapSize};
     SDL_SetRenderDrawColor(renderer,0,0,0,255);
@@ -1001,6 +1042,10 @@ void renderMiniMap(SDL_Renderer * renderer,Vec2* playerPos, GridSpace* playerShi
 
     SDL_SetRenderDrawColor(renderer,255,0,0,255);
     SDL_RenderFillRect(renderer, &miniPlayer);
+
+    SDL_SetRenderDrawColor(renderer,0,255,0,255);
+    SDL_RenderFillRect(renderer, &miniGoal);
+
     SDL_SetRenderDrawColor(renderer,0,0,0,255);
 }
 
