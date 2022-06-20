@@ -898,6 +898,20 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 		Restrict_EdgeTop,
 		Restrict_EdgeBottom,
 	} PlacementRestriction;
+	static const char* restrictionExplanation[] = {
+	    /*Restrict_None=*/
+	    "",
+	    /*Restrict_Inside=*/
+	    "MUST PLACE INSIDE",
+	    /*Restrict_EdgeAny=*/
+	    "MUST PLACE ON EDGE",
+	    /*Restrict_EdgeLeft=*/
+	    "MUST PLACE ON LEFT EDGE",
+	    /*Restrict_EdgeRight=*/
+	    "MUST PLACE ON RIGHT EDGE",
+	    /*Restrict_EdgeTop=*/
+	    "MUST PLACE ON TOP EDGE",
+	    /*Restrict_EdgeBottom=*/"MUST PLACE ON BOTTOM EDGE"};
 	static PlacementRestriction restrictions[] = {
 	    /*WALL*/ Restrict_EdgeAny, /*FLOOR*/ Restrict_Inside, /*CONVEYOR LEFT*/ Restrict_Inside,
 	    /*CONVEYOR RIGHT*/ Restrict_Inside,
@@ -975,31 +989,6 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 	    gridSpaceWorldPosition, editGridSpace, pickWorldPosition, &selectedCellX, &selectedCellY);
 	if (selectedCell)
 	{
-		for (int tileAssociation = 0; tileAssociation < ARRAY_SIZE(tileSheet->associations);
-		     ++tileAssociation)
-		{
-			CharacterSheetCellAssociation* association = &tileSheet->associations[tileAssociation];
-			if (editButtons[currentSelectedButtonIndex] != association->key)
-				continue;
-
-			int textureX = association->column * c_tileSize;
-			int textureY = association->row * c_tileSize;
-			int screenX =
-			    (gridSpaceWorldPosition.x - cameraPosition.x) + (selectedCellX * c_tileSize);
-			int screenY =
-			    (gridSpaceWorldPosition.y - cameraPosition.y) + (selectedCellY * c_tileSize);
-			SDL_Rect sourceRectangle = {textureX, textureY, c_tileSize, c_tileSize};
-			SDL_Rect destinationRectangle = {screenX, screenY, c_tileSize, c_tileSize};
-
-			drawOutlineRectangle(renderer, &destinationRectangle, mouseButtonState);
-
-			SDL_RenderCopyEx(renderer, tileSheet->texture, &sourceRectangle, &destinationRectangle,
-			                 c_transformsToAngles[association->transform],
-			                 /*rotate about (default = center)*/ NULL,
-			                 c_transformsToSDLRenderFlips[association->transform]);
-			break;
-		}
-
 		bool isValidPlacement = true;
 		{
 			switch (restrictions[currentSelectedButtonIndex])
@@ -1033,6 +1022,48 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 						isValidPlacement = false;
 					break;
 			}
+
+			if (inventory[currentSelectedButtonIndex] == 0)
+				isValidPlacement = false;
+		}
+
+		for (int tileAssociation = 0; tileAssociation < ARRAY_SIZE(tileSheet->associations);
+		     ++tileAssociation)
+		{
+			CharacterSheetCellAssociation* association = &tileSheet->associations[tileAssociation];
+			if (editButtons[currentSelectedButtonIndex] != association->key)
+				continue;
+
+			int textureX = association->column * c_tileSize;
+			int textureY = association->row * c_tileSize;
+			int screenX =
+			    (gridSpaceWorldPosition.x - cameraPosition.x) + (selectedCellX * c_tileSize);
+			int screenY =
+			    (gridSpaceWorldPosition.y - cameraPosition.y) + (selectedCellY * c_tileSize);
+			SDL_Rect sourceRectangle = {textureX, textureY, c_tileSize, c_tileSize};
+			SDL_Rect destinationRectangle = {screenX, screenY, c_tileSize, c_tileSize};
+
+			if (!isValidPlacement)
+			{
+				SDL_SetRenderDrawColor(renderer, 245, 15, 15, 255);
+				SDL_RenderDrawRect(renderer, &destinationRectangle);
+				const char* explanation =
+				    restrictionExplanation[restrictions[currentSelectedButtonIndex]];
+				if (inventory[currentSelectedButtonIndex] == 0)
+					explanation = "NONE LEFT";
+				renderText(renderer, tileSheet, screenX, screenY + c_tileSize, explanation);
+			}
+			else
+			{
+				drawOutlineRectangle(renderer, &destinationRectangle, mouseButtonState);
+
+				SDL_RenderCopyEx(renderer, tileSheet->texture, &sourceRectangle,
+				                 &destinationRectangle,
+				                 c_transformsToAngles[association->transform],
+				                 /*rotate about (default = center)*/ NULL,
+				                 c_transformsToSDLRenderFlips[association->transform]);
+			}
+			break;
 		}
 
 		if (isValidPlacement && mouseButtonState & SDL_BUTTON_LMASK &&
