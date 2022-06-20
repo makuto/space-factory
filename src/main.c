@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "SDL.h"
 
@@ -1232,6 +1233,8 @@ int main(int numArguments, char** arguments)
 	camera.y = playerPhys.position.y - (windowHeight / 2) + (playerShipData.height * c_tileSize) / 2;
 	camera.w = windowWidth;
 	camera.h = windowHeight;
+
+	srand(time(NULL));
 
     Goal goal;
     goal.x = rand() % c_spaceSize;
