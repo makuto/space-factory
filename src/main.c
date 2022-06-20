@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "SDL.h"
 
@@ -28,27 +29,23 @@ struct Vec2
 	float y;
 };
 
-struct iVec2{
-    int x;
-    int y;
+struct iVec2
+{
+	int x;
+	int y;
 };
 
 //
 // Constants
 //
-//screen
-const int c_screenWidth = 1920;
-const int c_screenHeight = 1080;
-
-//space
+// space
 const int c_spaceSize = 10000;
 const int c_spawnBuffer = 100;
 
-//goal
+// goal
 const int c_goalSize = 40;
 
-
-//minimap 
+// minimap
 const int c_miniMapSize = 400;
 //
 // Camera
@@ -92,10 +89,7 @@ struct EngineCell
 struct GridCell
 {
 	unsigned char type;
-	union
-	{
-		EngineCell engineCell;
-	} data;
+	EngineCell engineCell;
 };
 
 typedef struct GridSpace
@@ -159,8 +153,8 @@ typedef struct CharacterSheetCellAssociation
 
 typedef struct TileSheet
 {
-	// That's how big the tile sheet is!
-	CharacterSheetCellAssociation associations[4 * 4];
+	// This is the number of distinct things that can be rendered from the tile sheet
+	CharacterSheetCellAssociation associations[17];
 
 	SDL_Texture* texture;
 } TileSheet;
@@ -195,7 +189,7 @@ static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int 
 				{
 					// if this is an engine tile, and its firing, swap the off sprite for the on
 					// sprite, and draw the trail
-					if (GridCellAt(gridSpace, cellX, cellY).data.engineCell.firing)
+					if (GridCellAt(gridSpace, cellX, cellY).engineCell.firing)
 					{
 						textureX += c_tileSize;
 						SDL_Rect sourceRectangle = {textureX + c_tileSize, textureY, c_tileSize,
@@ -264,7 +258,7 @@ static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int 
 					SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 					SDL_RenderDrawRect(renderer, &fuelMeterRect);
 					float fuelPercentage =
-					    (GridCellAt(gridSpace, cellX, cellY).data.engineCell.fuel) / c_maxFuel;
+					    (GridCellAt(gridSpace, cellX, cellY).engineCell.fuel) / c_maxFuel;
 					if (meterWidth > meterHeight)
 					{
 						meterWidth *= fuelPercentage;
@@ -299,43 +293,45 @@ static void setGridSpaceFromString(GridSpace* gridSpace, const char* str)
 		writeHead->type = *c;
 		if (isEngineTile(*c))
 		{
-			writeHead->data.engineCell.fuel = c_defaultStartFuel;
-			writeHead->data.engineCell.firing = false;
+			writeHead->engineCell.fuel = c_defaultStartFuel;
+			writeHead->engineCell.firing = false;
 		}
 
 		++writeHead;
 	}
 }
 
-static void renderStarField(SDL_Renderer* renderer, Camera* camera)
+static void renderStarField(SDL_Renderer* renderer, Camera* camera, int windowWidth,
+                            int windowHeight)
 {
 	static SDL_FRect stars[128] = {0};
 	static SDL_FRect dynstars[128] = {0};
-	static bool starsInitialized = false;
-	if (!starsInitialized)
+	static int starsSizeX = 0;
+	static int starsSizeY = 0;
+	if (starsSizeX != windowWidth || starsSizeY != windowHeight)
 	{
+		starsSizeX = windowWidth;
+		starsSizeY = windowHeight;
 		for (int i = 0; i < ARRAY_SIZE(stars); ++i)
 		{
-			stars[i].x = rand() % c_screenWidth;
-			stars[i].y = rand() % c_screenHeight;
+			stars[i].x = rand() % starsSizeX;
+			stars[i].y = rand() % starsSizeY;
 			stars[i].w = rand() % 5 + 1;
 			stars[i].h = rand() % 5 + 1;
 			dynstars[i].w = stars[i].w;
 			dynstars[i].h = stars[i].h;
 		}
-		starsInitialized = true;
 	}
 
 	for (int i = 0; i < ARRAY_SIZE(stars); ++i)
 	{
-		dynstars[i].x = stars[i].x - camera->x/1000;
-		dynstars[i].y = stars[i].y - camera->y/1000;
+		dynstars[i].x = stars[i].x - camera->x / 1000;
+		dynstars[i].y = stars[i].y - camera->y / 1000;
 	}
 
 	SDL_SetRenderDrawColor(renderer, 128, 128, 128, 255);
 	SDL_RenderFillRectsF(renderer, dynstars, ARRAY_SIZE(dynstars));
 }
-
 
 //
 // Physics
@@ -364,18 +360,18 @@ void UpdatePhysics(RigidBody* object, float drag, float dt)
 
 	object->position.x += object->velocity.x * dt;
 	object->position.y += object->velocity.y * dt;
-    
-    if(object->position.x > c_spaceSize)
-        object->position.x = 0;
 
-    if(object->position.x < 0)
-        object->position.x = c_spaceSize;
+	if (object->position.x > c_spaceSize)
+		object->position.x = 0;
 
-    if(object->position.y > c_spaceSize)
-        object->position.y = 0;
+	if (object->position.x < 0)
+		object->position.x = c_spaceSize;
 
-    if(object->position.y < 0)
-        object->position.y = c_spaceSize;
+	if (object->position.y > c_spaceSize)
+		object->position.y = 0;
+
+	if (object->position.y < 0)
+		object->position.y = c_spaceSize;
 }
 
 RigidBody SpawnPlayerPhys()
@@ -445,9 +441,9 @@ int controlEnginesInDirection(GridSpace* gridSpace, char tileType, bool set)
 		for (int cellX = 0; cellX < gridSpace->width; ++cellX)
 		{
 			GridCell* cell = &GridCellAt(gridSpace, cellX, cellY);
-			if (tileType == cell->type && cell->data.engineCell.fuel > 0)
+			if (tileType == cell->type && cell->engineCell.fuel > 0)
 			{
-				cell->data.engineCell.firing = set;
+				cell->engineCell.firing = set;
 				count++;
 			}
 		}
@@ -462,14 +458,14 @@ void updateEngineFuel(GridSpace* gridSpace, float deltaTime)
 		for (int cellX = 0; cellX < gridSpace->width; ++cellX)
 		{
 			GridCell* cell = &GridCellAt(gridSpace, cellX, cellY);
-			if (isEngineTile(cell->type) && cell->data.engineCell.firing)
+			if (isEngineTile(cell->type) && cell->engineCell.firing)
 			{
-				cell->data.engineCell.fuel -= c_fuelConsumptionRate * deltaTime;
+				cell->engineCell.fuel -= c_fuelConsumptionRate * deltaTime;
 
-				if (cell->data.engineCell.fuel <= 0.f)
+				if (cell->engineCell.fuel <= 0.f)
 				{
-					cell->data.engineCell.fuel = 0.f;
-					cell->data.engineCell.firing = false;
+					cell->engineCell.fuel = 0.f;
+					cell->engineCell.firing = false;
 				}
 			}
 		}
@@ -483,13 +479,9 @@ typedef struct TransitionDelta
 	char y;
 } TransitionDelta;
 
-static const TransitionDelta c_transitions[] = {{'c', -1, 0},
-                                                {'<', -1, 0},
-                                                {'V', 0, 1},
-                                                {'A', 0, -1},
-                                                {'>', 1, 0},
-                                                // TODO
-                                                {'f', -1, 0}};
+static const TransitionDelta c_transitions[] = {{'R', -1, 0}, {'U', 0, 1},  {'D', 0, -1},
+                                                {'L', 1, 0},  {'<', -1, 0}, {'V', 0, 1},
+                                                {'A', 0, -1}, {'>', 1, 0}};
 typedef struct TileDelta
 {
 	char x;
@@ -498,6 +490,43 @@ typedef struct TileDelta
 } TileDelta;
 // Useful to check all cardinal directions of a tile
 static const TileDelta c_deltas[] = {{-1, 0, '<'}, {1, 0, '>'}, {0, -1, 'A'}, {0, 1, 'V'}};
+
+// Pick a random outgoing conveyor and move the object onto it
+static void conveyorAway(GridSpace* gridSpace, Object* objectToConveyor)
+{
+	for (int directionIndex = 0; directionIndex < ARRAY_SIZE(c_deltas); ++directionIndex)
+	{
+		char directionCellX = objectToConveyor->tileX + c_deltas[directionIndex].x;
+		char directionCellY = objectToConveyor->tileY + c_deltas[directionIndex].y;
+
+		// Don't allow out of bounds
+		if (directionCellX < 0 || directionCellX >= gridSpace->width || directionCellY < 0 ||
+		    directionCellY >= gridSpace->height)
+			return;
+
+		GridCell* currentCell = &GridCellAt(gridSpace, directionCellX, directionCellY);
+		GridCell* cellTo = &GridCellAt(gridSpace, directionCellX, directionCellY);
+		// TODO: Hack to "randomly" distribute objects in directions
+		if (cellTo->type == c_deltas[directionIndex].conveyor && rand() % 4 == 0)
+		{
+			objectToConveyor->tileX = directionCellX;
+			objectToConveyor->tileY = directionCellY;
+			objectToConveyor->transition = 0;
+			break;
+		}
+	}
+}
+
+static bool isIntake(char cellType)
+{
+	static const char intakes[] = {'L', 'R', 'U', 'D'};
+	for (int i = 0; i < ARRAY_SIZE(intakes); ++i)
+	{
+		if (intakes[i] == cellType)
+			return true;
+	}
+	return false;
+}
 
 void doFactory(GridSpace* gridSpace, float deltaTime)
 {
@@ -508,7 +537,10 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 			GridCell* cell = &GridCellAt(gridSpace, cellX, cellY);
 			switch (cell->type)
 			{
-				case 'c':
+				case 'L':
+				case 'R':
+				case 'U':
+				case 'D':
 				case '<':
 				case 'V':
 				case 'A':
@@ -518,7 +550,7 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 					{
 						Object* currentObject = &objects[i];
 						if (!currentObject->type || currentObject->tileX != cellX ||
-						    currentObject->tileY != cellY)
+						    currentObject->tileY != cellY || !currentObject->inFactory)
 							continue;
 
 						// TODO This isn't very safe because if <1, the object will never transition
@@ -545,44 +577,20 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 					{
 						Object* currentObject = &objects[i];
 						if (!currentObject->type || currentObject->tileX != cellX ||
-						    currentObject->tileY != cellY)
+						    currentObject->tileY != cellY || !currentObject->inFactory)
 							continue;
 
 						// Move objects along which aren't unrefined the same speed as a conveyor
-						if (currentObject->type == 'U')
+						if (currentObject->type == 'a')
 							currentObject->transition += c_furnaceTransitionPerSecond * deltaTime;
 						else
 							currentObject->transition += c_conveyorTransitionPerSecond * deltaTime;
 						if (currentObject->transition > c_transitionThreshold)
 						{
-							// TODO: Make generic FindAwayConveyor function
-							for (int directionIndex = 0; directionIndex < ARRAY_SIZE(c_deltas);
-							     ++directionIndex)
-							{
-								char directionCellX = cellX + c_deltas[directionIndex].x;
-								char directionCellY = cellY + c_deltas[directionIndex].y;
-								GridCell* currentCell =
-								    &GridCellAt(gridSpace, directionCellX, directionCellY);
-								// Filter out any cells which aren't conveyors
-								// TODO: Check this cell against grid size (otherwise, we WILL
-								// crash)
-								if (currentCell->type != '<' && currentCell->type != 'V' &&
-								    currentCell->type != 'A' && currentCell->type != '>')
-									continue;
-								GridCell* cellTo =
-								    &GridCellAt(gridSpace, directionCellX, directionCellY);
-								// TODO: Hack to "randomly" distribute objects in directions
-								if (cellTo->type == c_deltas[directionIndex].conveyor &&
-								    rand() % 4 == 0)
-								{
-									if (currentObject->type == 'U')
-										currentObject->type = 'R';
-									currentObject->tileX += c_deltas[directionIndex].x;
-									currentObject->tileY += c_deltas[directionIndex].y;
-									currentObject->transition = 0;
-									break;
-								}
-							}
+							if (currentObject->type == 'a')
+								currentObject->type = 'g';
+
+							conveyorAway(gridSpace, currentObject);
 						}
 					}
 					break;
@@ -596,12 +604,12 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 					{
 						Object* currentObject = &objects[i];
 						if (!currentObject->type || currentObject->tileX != cellX ||
-						    currentObject->tileY != cellY)
+						    currentObject->tileY != cellY || !currentObject->inFactory)
 							continue;
 
 						// Only refined objects will give fuel; everything else just gets destroyed
-						if (currentObject->type == 'R')
-							cell->data.engineCell.fuel += 1.f;
+						if (currentObject->type == 'g')
+							cell->engineCell.fuel += 1.f;
 						currentObject->type = 0;
 					}
 					break;
@@ -654,7 +662,8 @@ void snapCameraToGrid(Camera* camera, Vec2* position, GridSpace* grid, float del
 	camera->x -= cameraOffsetX;
 	camera->y -= cameraOffsetY;
 
-	/* fprintf(stderr, "%f, %f (player: %f, %f) delta %f %f\n", camera->x, camera->y, position->x, position->y, deltaX, deltaY); */
+	/* fprintf(stderr, "%f, %f (player: %f, %f) delta %f %f\n", camera->x, camera->y, position->x,
+	 * position->y, deltaX, deltaY); */
 }
 
 void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float deltaTime)
@@ -680,8 +689,10 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
 		}
 
 		// check for collisions by converting to tile space when in the proximity of the ship
-		float objShipLocalX = (currentObject->body.position.x - playerPhys->position.x) / c_tileSize;
-		float objShipLocalY = (currentObject->body.position.y - playerPhys->position.y) / c_tileSize;
+		float objShipLocalX =
+		    (currentObject->body.position.x - playerPhys->position.x) / c_tileSize;
+		float objShipLocalY =
+		    (currentObject->body.position.y - playerPhys->position.y) / c_tileSize;
 		if (objShipLocalY < -1 || objShipLocalY > (playerShipData->height + 1) ||
 		    objShipLocalX < -1 || objShipLocalX > (playerShipData->width + 1))
 			continue;
@@ -695,13 +706,14 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
 			cell = GridCellAt(playerShipData, shipTileX, shipTileY);
 
 		// otherwise check collisions with solid tiles, and update accordingly
-		if (cell.type == '#' || isEngineTile(cell.type))
+		if (cell.type)
 		{
 			if (objShipLocalY > 0 && objShipLocalY <= playerShipData->height)
 			{
 				// detect collision with edges
-				if (playerPhys->velocity.x > 0 && ((int)objShipLocalX == playerShipData->width - 1 ||
-				                                  (int)objShipLocalX == playerShipData->width - 2))
+				if (playerPhys->velocity.x > 0 &&
+				    ((int)objShipLocalX == playerShipData->width - 1 ||
+				     (int)objShipLocalX == playerShipData->width - 2))
 				{
 					currentObject->body.velocity.x = playerPhys->velocity.x * 1.2f;
 					playerPhys->velocity.x -= 10.f;
@@ -710,7 +722,7 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
 				if (playerPhys->velocity.x < 0 && shipTileX == 0)
 				{
 					currentObject->body.velocity.x = playerPhys->velocity.x * 1.2f;
-					playerPhys->velocity.x -= 10.f;
+					playerPhys->velocity.x += 10.f;
 				}
 			}
 			if (objShipLocalX > 0 && objShipLocalX <= playerShipData->width)
@@ -724,7 +736,7 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
 				if (playerPhys->velocity.y < 0 && (int)objShipLocalY == 0)
 				{
 					currentObject->body.velocity.y = playerPhys->velocity.y * 1.2f;
-					playerPhys->velocity.y -= 10.f;
+					playerPhys->velocity.y += 10.f;
 				}
 			}
 		}
@@ -735,7 +747,7 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
 		{
 			if (objShipLocalY > 0 && objShipLocalY <= playerShipData->height)
 			{
-				if (cell.type == 'c')
+				if (isIntake(cell.type))
 				{
 					currentObject->body.position.x =
 					    (shipTileX * c_tileSize) + playerPhys->position.x;
@@ -743,7 +755,8 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
 					    (shipTileY * c_tileSize) + playerPhys->position.y;
 					currentObject->body.velocity.x = 0;
 					currentObject->body.velocity.y = 0;
-					currentObject->tileX = shipTileX; currentObject->tileY = shipTileY;
+					currentObject->tileX = shipTileX;
+					currentObject->tileY = shipTileY;
 					currentObject->inFactory = true;
 				}
 			}
@@ -795,8 +808,7 @@ static void drawOutlineRectangle(SDL_Renderer* renderer, SDL_Rect* rectangleToOu
 	SDL_RenderFillRect(renderer, &selectionRectangle);
 }
 
-static void renderText(SDL_Renderer* renderer, TileSheet* tileSheet, int x, int y,
-					   const char* text)
+static void renderText(SDL_Renderer* renderer, TileSheet* tileSheet, int x, int y, const char* text)
 {
 	const int c_fontStartX = 0;
 	const int c_fontStartY = 99;
@@ -825,7 +837,8 @@ static void renderText(SDL_Renderer* renderer, TileSheet* tileSheet, int x, int 
 
 		char index = *read - 'A';
 		int textureX = c_fontStartX + ((index % c_charactersPerRow) * c_fontWidth);
-		int textureY = c_fontStartY + ((index / c_charactersPerRow) * (c_fontHeight + c_fontVerticalSpace));
+		int textureY =
+		    c_fontStartY + ((index / c_charactersPerRow) * (c_fontHeight + c_fontVerticalSpace));
 		int screenX = currentX + x;
 		int screenY = currentY + y;
 		SDL_Rect sourceRectangle = {textureX, textureY, c_fontWidth, c_fontHeight};
@@ -867,12 +880,38 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 	int mouseY = 0;
 	Uint32 mouseButtonState = SDL_GetMouseState(&mouseX, &mouseY);
 	static char currentSelectedButtonIndex = 0;
-	char editButtons[] = {'#', '.', '<', '>', 'A', 'V', 'f', 'c', 'l', 'r', 'u', 'd'};
-	const char* editButtonLabels[] = {
-	    "WALL",     "FLOOR",  "CONVEYOR LEFT", "CONVEYOR RIGHT", "CONVEYOR UP", "CONVEYOR DOWN",
-	    "REFINERY", "INTAKE", "ENGINE LEFT",   "ENGINE RIGHT",   "ENGINE UP",   "ENGINE DOWN"};
+	char editButtons[] = {'#', '.', '<', '>', 'A', 'V', 'f', 'L',
+	                      'R', 'U', 'D', 'l', 'r', 'u', 'd'};
+	const char* editButtonLabels[] = {"WALL", "FLOOR", "CONVEYOR LEFT", "CONVEYOR RIGHT",
+	                                  "CONVEYOR UP", "CONVEYOR DOWN", "REFINERY",
+	                                  // Intakes
+	                                  "INTAKE LEFT", "INTAKE RIGHT", "INTAKE UP", "INTAKE DOWN",
+	                                  // Engines
+	                                  "ENGINE LEFT", "ENGINE RIGHT", "ENGINE UP", "ENGINE DOWN"};
+	typedef enum PlacementRestriction
+	{
+		Restrict_None,
+		Restrict_Inside,
+		Restrict_EdgeAny,
+		Restrict_EdgeLeft,
+		Restrict_EdgeRight,
+		Restrict_EdgeTop,
+		Restrict_EdgeBottom,
+	} PlacementRestriction;
+	static PlacementRestriction restrictions[] = {
+	    /*WALL*/ Restrict_EdgeAny, /*FLOOR*/ Restrict_Inside, /*CONVEYOR LEFT*/ Restrict_Inside,
+	    /*CONVEYOR RIGHT*/ Restrict_Inside,
+	    /*CONVEYOR UP*/ Restrict_Inside, /*CONVEYOR DOWN*/ Restrict_Inside,
+	    /*REFINERY*/ Restrict_Inside,
+	    // Intakes
+	    /*INTAKE LEFT*/ Restrict_EdgeLeft, /*INTAKE RIGHT*/ Restrict_EdgeRight,
+	    /*INTAKE UP*/ Restrict_EdgeTop, /*INTAKE DOWN*/ Restrict_EdgeBottom,
+	    // Engines
+	    /*ENGINE LEFT*/ Restrict_EdgeLeft, /*ENGINE RIGHT*/ Restrict_EdgeRight,
+	    /*ENGINE UP*/ Restrict_EdgeBottom, /*ENGINE DOWN*/ Restrict_EdgeTop};
 	static unsigned short inventory[] = {/*'#'=*/100, /*'.'=*/999, /*'<'=*/100, /*'>'=*/100,
-	                                     /*'A'=*/100, /*'V'=*/100, /*'f'=*/8,   /*'c'=*/8,
+	                                     /*'A'=*/100, /*'V'=*/100, /*'f'=*/8,   /*'L'=*/8,
+	                                     /*'R'=*/8,   /*'U'=*/8,   /*'D'=*/8,
 	                                     /*'l'=*/8,   /*'r'=*/8,   /*'u'=*/8,   /*'d'=*/8};
 	const int c_buttonMarginX = 22;
 	int startButtonBarX =
@@ -899,8 +938,8 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 			SDL_Rect sourceRectangle = {textureX, textureY, c_tileSize, c_tileSize};
 			SDL_Rect destinationRectangle = {screenX, screenY, c_tileSize, c_tileSize};
 
-			if (mouseX >= destinationRectangle.x - (c_buttonMarginX / 2) &&
-				mouseX <= destinationRectangle.x + destinationRectangle.w + (c_buttonMarginX / 2) &&
+			if (mouseX > destinationRectangle.x - (c_buttonMarginX / 2) &&
+			    mouseX <= destinationRectangle.x + destinationRectangle.w + (c_buttonMarginX / 2) &&
 			    mouseY >= destinationRectangle.y &&
 			    mouseY <= destinationRectangle.y + destinationRectangle.h)
 			{
@@ -961,7 +1000,43 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 			break;
 		}
 
-		if (mouseButtonState & SDL_BUTTON_LMASK && inventory[currentSelectedButtonIndex] &&
+		bool isValidPlacement = true;
+		{
+			switch (restrictions[currentSelectedButtonIndex])
+			{
+				case Restrict_None:
+					break;
+				case Restrict_Inside:
+					if (selectedCellX == 0 || selectedCellX == editGridSpace->width - 1 ||
+					    selectedCellY == 0 || selectedCellY == editGridSpace->height - 1)
+						isValidPlacement = false;
+					break;
+				case Restrict_EdgeAny:
+					if ((selectedCellX != 0 && selectedCellX != editGridSpace->width - 1) &&
+					    (selectedCellY != 0 && selectedCellY != editGridSpace->height - 1))
+						isValidPlacement = false;
+					break;
+				case Restrict_EdgeLeft:
+					if (selectedCellX != 0)
+						isValidPlacement = false;
+					break;
+				case Restrict_EdgeRight:
+					if (selectedCellX != editGridSpace->width - 1)
+						isValidPlacement = false;
+					break;
+				case Restrict_EdgeTop:
+					if (selectedCellY != 0)
+						isValidPlacement = false;
+					break;
+				case Restrict_EdgeBottom:
+					if (selectedCellY != editGridSpace->height - 1)
+						isValidPlacement = false;
+					break;
+			}
+		}
+
+		if (isValidPlacement && mouseButtonState & SDL_BUTTON_LMASK &&
+		    inventory[currentSelectedButtonIndex] &&
 		    selectedCell->type != editButtons[currentSelectedButtonIndex])
 		{
 			// Give back resources
@@ -983,136 +1058,149 @@ static void doTutorial(SDL_Renderer* renderer, TileSheet* tileSheet)
 {
 	// No sci-fi game is complete without some cheese
 	const char* tutorialText =
-		"FREEDOM, CURIOSITY, SHARED DESTINY:\n"
-		"THE CONGLOMERATE IS NOT HAPPY WITH YOU SPREADING THESE IDEALS\n\n\n"
-		"YOU MUST REFINE ASTEROIDS INTO FUEL\n"
+	    "FREEDOM, CURIOSITY, SHARED DESTINY:\n"
+	    "THE CONGLOMERATE IS NOT HAPPY WITH YOU SPREADING THESE IDEALS\n\n\n"
+	    "YOU MUST REFINE ASTEROIDS INTO FUEL\n"
 	    "FUEL YOUR ENGINES TO MANEUVER THE SHIP\n\n"
-		"CUSTOMIZE YOUR FACTORY TO MAXIMIZE EFFICIENCY\n"
-		"EVERY SECOND COUNTS\n"
+	    "CUSTOMIZE YOUR FACTORY TO MAXIMIZE EFFICIENCY\n"
+	    "EVERY SECOND COUNTS\n"
 	    "REACH THE TARGET LOCATIONS IN TIME TO AVOID DETECTION\n\n\n"
-		"YOUR CREW DEPENDS ON YOU\n";
+	    "YOUR CREW DEPENDS ON YOU\n";
 	renderText(renderer, tileSheet, 200, 200, tutorialText);
 }
 
 static void doEndScreenSuccess(SDL_Renderer* renderer, TileSheet* tileSheet)
 {
 	const char* endScreenSuccess =
-		"YOU SUCCESSFULLY AVOIDED DETECTION\n\n"
-		"YOUR EXHAUSTED CREW CELEBRATES\n\n\n"
-		"BUT YOU KNOW THIS IS ONLY THE BEGINNING\n";
+	    "YOU SUCCESSFULLY AVOIDED DETECTION\n\n"
+	    "YOUR EXHAUSTED CREW CELEBRATES\n\n"
+	    "BUT YOU KNOW THIS IS ONLY THE BEGINNING\n"
+	    "\n\n\n\n"
+		"THANK YOU FOR PLAYING\n\n"
+		"CREATED BY\n"
+	    "MACOY MADSON\n"
+	    "WILL CHAMBERS\n\n"
+	    "COPYRIGHT TWENTY TWENTY TWO\n"
+	    "AVAILABLE UNDER TERMS OF GNU GENERAL PUBLIC LICENSE VERSION THREE\n";
 	renderText(renderer, tileSheet, 200, 200, endScreenSuccess);
 }
 
-//Goal
-//for now just a simple rect
+// Goal
+// for now just a simple rect
 //
 
 typedef SDL_Rect Goal;
 
-static void renderGoal(SDL_Renderer* renderer, Camera* camera, Goal* goal){
-
-        SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
-        SDL_Rect goalVis = {(int)(goal->x - camera->x),(int) ((float)goal->y - camera->y), (int)goal->w, (int)goal->h};
-        SDL_RenderFillRect(renderer, &goalVis);
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+static void renderGoal(SDL_Renderer* renderer, Camera* camera, Goal* goal)
+{
+	SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+	SDL_Rect goalVis = {(int)(goal->x - camera->x), (int)((float)goal->y - camera->y), (int)goal->w,
+	                    (int)goal->h};
+	SDL_RenderFillRect(renderer, &goalVis);
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 }
 
-bool pointInRect(Vec2* point, SDL_Rect * rect){
-    return point->x > rect->x && point->x < (rect->x+rect->w) 
-            &&point->y > rect->y && point->y < (rect->y+rect->h);
+bool pointInRect(Vec2* point, SDL_Rect* rect)
+{
+	return point->x > rect->x && point->x < (rect->x + rect->w) && point->y > rect->y &&
+	       point->y < (rect->y + rect->h);
 }
 
-bool CheckGoalSatisfied(Vec2* playerPos, GridSpace* playerShip,Goal * goal){
-    //aligned box collision WILL BREAK IF WE EVER ROTATE ANYTHING
-    Vec2 goalTL = {(float) goal->x, (float)goal->y};
-    Vec2 goalTR = {(float)(goal->x + goal->w),(float) goal->y};
-    Vec2 goalBL = {(float )goal->x, (float)(goal->y + goal->h)};
-    Vec2 goalBR = {(float)(goal->x+goal->w), (float)(goal->y + goal->h)};
+bool CheckGoalSatisfied(Vec2* playerPos, GridSpace* playerShip, Goal* goal)
+{
+	// aligned box collision WILL BREAK IF WE EVER ROTATE ANYTHING
+	Vec2 goalTL = {(float)goal->x, (float)goal->y};
+	Vec2 goalTR = {(float)(goal->x + goal->w), (float)goal->y};
+	Vec2 goalBL = {(float)goal->x, (float)(goal->y + goal->h)};
+	Vec2 goalBR = {(float)(goal->x + goal->w), (float)(goal->y + goal->h)};
 
-    int playerWidth =  playerShip->width*c_tileSize;
-    int playerHeight =  playerShip->height*c_tileSize;
+	int playerWidth = playerShip->width * c_tileSize;
+	int playerHeight = playerShip->height * c_tileSize;
 
-    Vec2 playerTR = {(playerPos->x + playerWidth), (float)playerPos->y};
-    Vec2 playerBL = {(float)playerPos->x, (float)(playerPos->y + playerHeight)};
-    Vec2 playerBR = {(float)(playerPos->x + playerWidth),(float) (playerPos->y + playerHeight)};
+	Vec2 playerTR = {(playerPos->x + playerWidth), (float)playerPos->y};
+	Vec2 playerBL = {(float)playerPos->x, (float)(playerPos->y + playerHeight)};
+	Vec2 playerBR = {(float)(playerPos->x + playerWidth), (float)(playerPos->y + playerHeight)};
 
+	SDL_Rect playerBoundingBox = {(int)playerPos->x, (int)playerPos->y, playerWidth, playerHeight};
 
-    SDL_Rect playerBoundingBox = {(int)playerPos->x, (int)playerPos->y, playerWidth, playerHeight };
-
-
-    return pointInRect(&goalTL,&playerBoundingBox) || pointInRect(&goalTR,&playerBoundingBox)
-        || pointInRect(&goalBL, &playerBoundingBox) || pointInRect(&goalBR,&playerBoundingBox)||
-        pointInRect(playerPos,goal) || pointInRect(&playerTR,goal) || pointInRect(&playerBL,goal) 
-        || pointInRect(&playerBR,goal);
-     
+	return pointInRect(&goalTL, &playerBoundingBox) || pointInRect(&goalTR, &playerBoundingBox) ||
+	       pointInRect(&goalBL, &playerBoundingBox) || pointInRect(&goalBR, &playerBoundingBox) ||
+	       pointInRect(playerPos, goal) || pointInRect(&playerTR, goal) ||
+	       pointInRect(&playerBL, goal) || pointInRect(&playerBR, goal);
 }
 
-
-iVec2 toMiniMapCoordinates(float worldCoordX, float worldCoordY){
-    float nWorldCoordX = worldCoordX/c_spaceSize;
-    float nWorldCoordY = worldCoordY/c_spaceSize;
-    return {(int)(nWorldCoordX*c_miniMapSize), (int)(nWorldCoordY*c_miniMapSize)};
+iVec2 toMiniMapCoordinates(float worldCoordX, float worldCoordY)
+{
+	float nWorldCoordX = worldCoordX / c_spaceSize;
+	float nWorldCoordY = worldCoordY / c_spaceSize;
+	return {(int)(nWorldCoordX * c_miniMapSize), (int)(nWorldCoordY * c_miniMapSize)};
 }
 
-SDL_Rect scaleRectToMinimap(float x, float y, float w, float h){
-    iVec2 miniMapXY = toMiniMapCoordinates(x,y);
-    iVec2 miniMapWH = toMiniMapCoordinates(w,h);
+SDL_Rect scaleRectToMinimap(float x, float y, float w, float h)
+{
+	iVec2 miniMapXY = toMiniMapCoordinates(x, y);
+	iVec2 miniMapWH = toMiniMapCoordinates(w, h);
 
-    if(miniMapWH.x == 0)
-        miniMapWH.x = 1;
+	if (miniMapWH.x == 0)
+		miniMapWH.x = 1;
 
-    if(miniMapWH.y == 0)
-        miniMapWH.y = 1;
-        
-    return {miniMapXY.x, miniMapXY.y, miniMapWH.x, miniMapWH.y};
+	if (miniMapWH.y == 0)
+		miniMapWH.y = 1;
+
+	return {miniMapXY.x, miniMapXY.y, miniMapWH.x, miniMapWH.y};
 }
-
-//MiniMap
-
-void renderMiniMap(SDL_Renderer * renderer,Vec2* playerPos, GridSpace* playerShip, Goal* goal){
-    
 
     int miniMapX = c_screenWidth - 1.5*c_miniMapSize;
     int miniMapY = c_screenHeight - c_miniMapSize;
+// MiniMap
 
-    SDL_Rect miniPlayer = scaleRectToMinimap(playerPos->x, playerPos->y, playerShip->width*c_tileSize, playerShip->height*c_tileSize);
-    SDL_Rect miniGoal = scaleRectToMinimap(goal->x, goal->y, goal->w, goal->h);
+void renderMiniMap(SDL_Renderer* renderer, int windowWidth, int windowHeight, Vec2* playerPos,
+                   GridSpace* playerShip, Goal* goal)
+{
+	const int miniMapMargin = 10;
+	int miniMapX = windowWidth - c_miniMapSize - miniMapMargin;
+	int miniMapY = windowHeight - c_miniMapSize - miniMapMargin;
 
-    miniPlayer.x +=miniMapX;
-    miniPlayer.y += miniMapY;
+	SDL_Rect miniPlayer =
+	    scaleRectToMinimap(playerPos->x, playerPos->y, playerShip->width * c_tileSize,
+	                       playerShip->height * c_tileSize);
+	SDL_Rect miniGoal = scaleRectToMinimap(goal->x, goal->y, goal->w, goal->h);
 
-    miniGoal.x +=miniMapX;
-    miniGoal.y +=miniMapY;
-    miniGoal.w = 4; 
-    miniGoal.h = 4; 
+	miniPlayer.x += miniMapX;
+	miniPlayer.y += miniMapY;
 
+	miniGoal.x += miniMapX;
+	miniGoal.y += miniMapY;
+	miniGoal.w = 4;
+	miniGoal.h = 4;
 
-    SDL_Rect miniMapBounds = {miniMapX,miniMapY, c_miniMapSize, c_miniMapSize};
-    SDL_SetRenderDrawColor(renderer,0,0,0,255);
-    SDL_RenderFillRect(renderer, &miniMapBounds);
-    SDL_SetRenderDrawColor(renderer,255,255,255,255);
-    SDL_RenderDrawRect(renderer, &miniMapBounds);
+	SDL_Rect miniMapBounds = {miniMapX, miniMapY, c_miniMapSize, c_miniMapSize};
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+	SDL_RenderFillRect(renderer, &miniMapBounds);
+	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+	SDL_RenderDrawRect(renderer, &miniMapBounds);
 
-    SDL_SetRenderDrawColor(renderer,255,0,0,255);
-    SDL_RenderFillRect(renderer, &miniPlayer);
+	SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+	SDL_RenderFillRect(renderer, &miniPlayer);
 
-    SDL_SetRenderDrawColor(renderer,0,255,0,255);
-    SDL_RenderFillRect(renderer, &miniGoal);
+	SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+	SDL_RenderFillRect(renderer, &miniGoal);
 
-    SDL_SetRenderDrawColor(renderer,0,0,0,255);
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
 	for (int i = 0; i < ARRAY_SIZE(objects); i++)
 	{
 		Object* currentObject = &objects[i];
 		if (!currentObject->type)
-    		continue;
-        iVec2 miniMapObjPos = toMiniMapCoordinates(currentObject->body.position.x, currentObject->body.position.y);
-        miniMapObjPos.x +=miniMapX;
-        miniMapObjPos.y +=miniMapY;
-        SDL_Rect miniObj = {miniMapObjPos.x, miniMapObjPos.y,4,4};
-        SDL_SetRenderDrawColor(renderer,0,0,255,255);
-        SDL_RenderFillRect(renderer, &miniObj);
-    }
+			continue;
+		iVec2 miniMapObjPos =
+		    toMiniMapCoordinates(currentObject->body.position.x, currentObject->body.position.y);
+		miniMapObjPos.x += miniMapX;
+		miniMapObjPos.y += miniMapY;
+		SDL_Rect miniObj = {miniMapObjPos.x, miniMapObjPos.y, 4, 4};
+		SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
+		SDL_RenderFillRect(renderer, &miniObj);
+	}
 }
 
 //
@@ -1126,8 +1214,8 @@ int main(int numArguments, char** arguments)
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
 	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
 	SDL_Window* window = NULL;
-	int windowWidth = c_screenWidth;
-	int windowHeight = c_screenHeight;
+	int windowWidth = 1920;
+	int windowHeight = 1080;
 	if (!(sdlInitializeFor2d((&window), "Space Factory", windowWidth, windowHeight)))
 	{
 		fprintf(stderr, "Failed to initialize SDL\n");
@@ -1192,7 +1280,13 @@ int main(int numArguments, char** arguments)
 	                           // Furnace
 	                           {'f', 2, 1, TextureTransform_None},
 	                           // Intake from right
-	                           {'c', 2, 0, TextureTransform_None},
+	                           {'R', 2, 0, TextureTransform_None},
+	                           // Intake from left
+	                           {'L', 2, 0, TextureTransform_FlipHorizontal},
+	                           // Intake from top
+	                           {'U', 2, 0, TextureTransform_CounterClockwise90},
+	                           // Intake from bottom
+	                           {'D', 2, 0, TextureTransform_Clockwise90},
 	                           // Engine to left (unpowered)
 	                           {'l', 1, 1, TextureTransform_FlipHorizontal},
 	                           {'r', 1, 1, TextureTransform_None},
@@ -1200,10 +1294,10 @@ int main(int numArguments, char** arguments)
 	                           {'d', 1, 1, TextureTransform_CounterClockwise90},
 
 	                           // Objects
-	                           // Unrefined fuel
-	                           {'U', 0, 3, TextureTransform_None},
+	                           // Unrefined fuel (asteroid)
+	                           {'a', 0, 3, TextureTransform_None},
 	                           // Refined fuel
-	                           {'R', 1, 0, TextureTransform_None},
+	                           {'g', 1, 0, TextureTransform_None},
 	                       },
 	                       tileSheetTexture};
 
@@ -1218,8 +1312,8 @@ int main(int numArguments, char** arguments)
 		setGridSpaceFromString(playerShip,
 		                       "#######d##########"
 		                       "#......A.........#"
-		                       "l<<<<<<f<<<<<<<<<c"
-		                       "l<<<<<<<<<.V<<<<<c"
+		                       "l<<<<<<f<<<<<<<<<R"
+		                       "l<<<<<<<<<.V<<<<<R"
 		                       "#........A.V.....#"
 		                       "#........A<f>>>>>r"
 		                       "#######u##########");
@@ -1230,21 +1324,24 @@ int main(int numArguments, char** arguments)
 	// snap the camera to the player postion
 	Camera camera;
 	camera.x = playerPhys.position.x - (windowWidth / 2) + (playerShipData.width * c_tileSize) / 2;
-	camera.y = playerPhys.position.y - (windowHeight / 2) + (playerShipData.height * c_tileSize) / 2;
+	camera.y =
+	    playerPhys.position.y - (windowHeight / 2) + (playerShipData.height * c_tileSize) / 2;
 	camera.w = windowWidth;
 	camera.h = windowHeight;
 
-    Goal goal;
-    goal.x = rand() % c_spaceSize;
-    goal.y = rand() % c_spaceSize;
-    goal.w = c_goalSize;
-    goal.h = c_goalSize;
+	srand(time(NULL));
+
+	Goal goal;
+	goal.x = rand() % c_spaceSize;
+	goal.y = rand() % c_spaceSize;
+	goal.w = c_goalSize;
+	goal.h = c_goalSize;
 
 	// Make some objects
 	for (int i = 0; i < 400; ++i)
 	{
 		Object* testObject = &objects[i];
-		testObject->type = 'U';
+		testObject->type = 'a';
 		testObject->body.position.x = (float)(rand() % c_spaceSize);
 		testObject->body.position.y = (float)(rand() % c_spaceSize);
 		testObject->body.velocity.x = (float)((rand() % 50) - 25);
@@ -1269,6 +1366,9 @@ int main(int numArguments, char** arguments)
 				exitReason = "Window event";
 			}
 		}
+		SDL_GetRendererOutputSize(renderer, &windowWidth, &windowHeight);
+		camera.w = windowWidth;
+		camera.h = windowHeight;
 		const Uint8* currentKeyStates = SDL_GetKeyboardState(NULL);
 		if (currentKeyStates[SDL_SCANCODE_ESCAPE])
 		{
@@ -1347,16 +1447,16 @@ int main(int numArguments, char** arguments)
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		SDL_RenderClear(renderer);
 
-		renderStarField(renderer, &camera);
+		renderStarField(renderer, &camera, windowWidth, windowHeight);
 
 		renderGridSpaceFromTileSheet(playerShip, playerPhys.position.x, playerPhys.position.y,
 		                             renderer, &tileSheet, &camera);
 
 		renderObjects(renderer, &tileSheet, &camera);
 
-        renderGoal(renderer,&camera,&goal);
+		renderGoal(renderer, &camera, &goal);
 
-        renderMiniMap(renderer,&playerPhys.position,playerShip,&goal);
+		renderMiniMap(renderer, windowWidth, windowHeight, &playerPhys.position, playerShip, &goal);
 
         if(CheckGoalSatisfied(&playerPhys.position,playerShip,&goal)){
             goal.x = rand() % (c_spaceSize - c_spawnBuffer);
@@ -1373,8 +1473,8 @@ int main(int numArguments, char** arguments)
 			if (playerVelocity >= (int)c_maxSpeed)
 				renderText(renderer, &tileSheet, 100, 120, "WARNING MAX VELOCITY REACHED");
 
-			doTutorial(renderer, &tileSheet);
-			/* doEndScreenSuccess(renderer, &tileSheet); */
+			/* doTutorial(renderer, &tileSheet); */
+			doEndScreenSuccess(renderer, &tileSheet);
 		}
 
 		Vec2 cameraPosition = {(float)camera.x, (float)camera.y};
