@@ -1269,6 +1269,8 @@ int main(int numArguments, char** arguments)
 			}
 		}
 		SDL_GetRendererOutputSize(renderer, &windowWidth, &windowHeight);
+		camera.w = windowWidth;
+		camera.h = windowHeight;
 		const Uint8* currentKeyStates = SDL_GetKeyboardState(NULL);
 		if (currentKeyStates[SDL_SCANCODE_ESCAPE])
 		{
