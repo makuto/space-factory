@@ -29,22 +29,22 @@ struct Vec2
 	float y;
 };
 
-struct iVec2{
-    int x;
-    int y;
+struct iVec2
+{
+	int x;
+	int y;
 };
 
 //
 // Constants
 //
-//space
+// space
 const int c_spaceSize = 10000;
 
-//goal
+// goal
 const int c_goalSize = 40;
 
-
-//minimap 
+// minimap
 const int c_miniMapSize = 400;
 //
 // Camera
@@ -362,18 +362,18 @@ void UpdatePhysics(RigidBody* object, float drag, float dt)
 
 	object->position.x += object->velocity.x * dt;
 	object->position.y += object->velocity.y * dt;
-    
-    if(object->position.x > c_spaceSize)
-        object->position.x = 0;
 
-    if(object->position.x < 0)
-        object->position.x = c_spaceSize;
+	if (object->position.x > c_spaceSize)
+		object->position.x = 0;
 
-    if(object->position.y > c_spaceSize)
-        object->position.y = 0;
+	if (object->position.x < 0)
+		object->position.x = c_spaceSize;
 
-    if(object->position.y < 0)
-        object->position.y = c_spaceSize;
+	if (object->position.y > c_spaceSize)
+		object->position.y = 0;
+
+	if (object->position.y < 0)
+		object->position.y = c_spaceSize;
 }
 
 RigidBody SpawnPlayerPhys()
@@ -496,8 +496,7 @@ static const TileDelta c_deltas[] = {{-1, 0, '<'}, {1, 0, '>'}, {0, -1, 'A'}, {0
 // Pick a random outgoing conveyor and move the object onto it
 static void conveyorAway(GridSpace* gridSpace, Object* objectToConveyor)
 {
-	for (int directionIndex = 0; directionIndex < ARRAY_SIZE(c_deltas);
-		 ++directionIndex)
+	for (int directionIndex = 0; directionIndex < ARRAY_SIZE(c_deltas); ++directionIndex)
 	{
 		char directionCellX = objectToConveyor->tileX + c_deltas[directionIndex].x;
 		char directionCellY = objectToConveyor->tileY + c_deltas[directionIndex].y;
@@ -507,13 +506,10 @@ static void conveyorAway(GridSpace* gridSpace, Object* objectToConveyor)
 		    directionCellY >= gridSpace->height)
 			return;
 
-		GridCell* currentCell =
-			&GridCellAt(gridSpace, directionCellX, directionCellY);
-		GridCell* cellTo =
-			&GridCellAt(gridSpace, directionCellX, directionCellY);
+		GridCell* currentCell = &GridCellAt(gridSpace, directionCellX, directionCellY);
+		GridCell* cellTo = &GridCellAt(gridSpace, directionCellX, directionCellY);
 		// TODO: Hack to "randomly" distribute objects in directions
-		if (cellTo->type == c_deltas[directionIndex].conveyor &&
-			rand() % 4 == 0)
+		if (cellTo->type == c_deltas[directionIndex].conveyor && rand() % 4 == 0)
 		{
 			objectToConveyor->tileX = directionCellX;
 			objectToConveyor->tileY = directionCellY;
@@ -663,7 +659,8 @@ void snapCameraToGrid(Camera* camera, Vec2* position, GridSpace* grid, float del
 	camera->x -= cameraOffsetX;
 	camera->y -= cameraOffsetY;
 
-	/* fprintf(stderr, "%f, %f (player: %f, %f) delta %f %f\n", camera->x, camera->y, position->x, position->y, deltaX, deltaY); */
+	/* fprintf(stderr, "%f, %f (player: %f, %f) delta %f %f\n", camera->x, camera->y, position->x,
+	 * position->y, deltaX, deltaY); */
 }
 
 void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float deltaTime)
@@ -689,8 +686,10 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
 		}
 
 		// check for collisions by converting to tile space when in the proximity of the ship
-		float objShipLocalX = (currentObject->body.position.x - playerPhys->position.x) / c_tileSize;
-		float objShipLocalY = (currentObject->body.position.y - playerPhys->position.y) / c_tileSize;
+		float objShipLocalX =
+		    (currentObject->body.position.x - playerPhys->position.x) / c_tileSize;
+		float objShipLocalY =
+		    (currentObject->body.position.y - playerPhys->position.y) / c_tileSize;
 		if (objShipLocalY < -1 || objShipLocalY > (playerShipData->height + 1) ||
 		    objShipLocalX < -1 || objShipLocalX > (playerShipData->width + 1))
 			continue;
@@ -709,8 +708,9 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
 			if (objShipLocalY > 0 && objShipLocalY <= playerShipData->height)
 			{
 				// detect collision with edges
-				if (playerPhys->velocity.x > 0 && ((int)objShipLocalX == playerShipData->width - 1 ||
-				                                  (int)objShipLocalX == playerShipData->width - 2))
+				if (playerPhys->velocity.x > 0 &&
+				    ((int)objShipLocalX == playerShipData->width - 1 ||
+				     (int)objShipLocalX == playerShipData->width - 2))
 				{
 					currentObject->body.velocity.x = playerPhys->velocity.x * 1.2f;
 					playerPhys->velocity.x -= 10.f;
@@ -752,7 +752,8 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
 					    (shipTileY * c_tileSize) + playerPhys->position.y;
 					currentObject->body.velocity.x = 0;
 					currentObject->body.velocity.y = 0;
-					currentObject->tileX = shipTileX; currentObject->tileY = shipTileY;
+					currentObject->tileX = shipTileX;
+					currentObject->tileY = shipTileY;
 					currentObject->inFactory = true;
 				}
 			}
@@ -804,8 +805,7 @@ static void drawOutlineRectangle(SDL_Renderer* renderer, SDL_Rect* rectangleToOu
 	SDL_RenderFillRect(renderer, &selectionRectangle);
 }
 
-static void renderText(SDL_Renderer* renderer, TileSheet* tileSheet, int x, int y,
-					   const char* text)
+static void renderText(SDL_Renderer* renderer, TileSheet* tileSheet, int x, int y, const char* text)
 {
 	const int c_fontStartX = 0;
 	const int c_fontStartY = 99;
@@ -834,7 +834,8 @@ static void renderText(SDL_Renderer* renderer, TileSheet* tileSheet, int x, int 
 
 		char index = *read - 'A';
 		int textureX = c_fontStartX + ((index % c_charactersPerRow) * c_fontWidth);
-		int textureY = c_fontStartY + ((index / c_charactersPerRow) * (c_fontHeight + c_fontVerticalSpace));
+		int textureY =
+		    c_fontStartY + ((index / c_charactersPerRow) * (c_fontHeight + c_fontVerticalSpace));
 		int screenX = currentX + x;
 		int screenY = currentY + y;
 		SDL_Rect sourceRectangle = {textureX, textureY, c_fontWidth, c_fontHeight};
@@ -914,7 +915,7 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 			SDL_Rect destinationRectangle = {screenX, screenY, c_tileSize, c_tileSize};
 
 			if (mouseX >= destinationRectangle.x - (c_buttonMarginX / 2) &&
-				mouseX <= destinationRectangle.x + destinationRectangle.w + (c_buttonMarginX / 2) &&
+			    mouseX <= destinationRectangle.x + destinationRectangle.w + (c_buttonMarginX / 2) &&
 			    mouseY >= destinationRectangle.y &&
 			    mouseY <= destinationRectangle.y + destinationRectangle.h)
 			{
@@ -997,143 +998,146 @@ static void doTutorial(SDL_Renderer* renderer, TileSheet* tileSheet)
 {
 	// No sci-fi game is complete without some cheese
 	const char* tutorialText =
-		"FREEDOM, CURIOSITY, SHARED DESTINY:\n"
-		"THE CONGLOMERATE IS NOT HAPPY WITH YOU SPREADING THESE IDEALS\n\n\n"
-		"YOU MUST REFINE ASTEROIDS INTO FUEL\n"
+	    "FREEDOM, CURIOSITY, SHARED DESTINY:\n"
+	    "THE CONGLOMERATE IS NOT HAPPY WITH YOU SPREADING THESE IDEALS\n\n\n"
+	    "YOU MUST REFINE ASTEROIDS INTO FUEL\n"
 	    "FUEL YOUR ENGINES TO MANEUVER THE SHIP\n\n"
-		"CUSTOMIZE YOUR FACTORY TO MAXIMIZE EFFICIENCY\n"
-		"EVERY SECOND COUNTS\n"
+	    "CUSTOMIZE YOUR FACTORY TO MAXIMIZE EFFICIENCY\n"
+	    "EVERY SECOND COUNTS\n"
 	    "REACH THE TARGET LOCATIONS IN TIME TO AVOID DETECTION\n\n\n"
-		"YOUR CREW DEPENDS ON YOU\n";
+	    "YOUR CREW DEPENDS ON YOU\n";
 	renderText(renderer, tileSheet, 200, 200, tutorialText);
 }
 
 static void doEndScreenSuccess(SDL_Renderer* renderer, TileSheet* tileSheet)
 {
 	const char* endScreenSuccess =
-		"YOU SUCCESSFULLY AVOIDED DETECTION\n\n"
-		"YOUR EXHAUSTED CREW CELEBRATES\n\n"
-		"BUT YOU KNOW THIS IS ONLY THE BEGINNING\n"
-		"\n\n\n\n"
-		"THANK YOU FOR PLAYING\n\n"
-		"MACOY MADSON\n"
-		"WILL CHAMBERS\n\n"
-		"COPYRIGHT TWENTY TWENTY TWO\n"
-		"AVAILABLE UNDER TERMS OF GNU GENERAL PUBLIC LICENSE VERSION THREE\n";
+	    "YOU SUCCESSFULLY AVOIDED DETECTION\n\n"
+	    "YOUR EXHAUSTED CREW CELEBRATES\n\n"
+	    "BUT YOU KNOW THIS IS ONLY THE BEGINNING\n"
+	    "\n\n\n\n"
+	    "THANK YOU FOR PLAYING\n\n"
+	    "MACOY MADSON\n"
+	    "WILL CHAMBERS\n\n"
+	    "COPYRIGHT TWENTY TWENTY TWO\n"
+	    "AVAILABLE UNDER TERMS OF GNU GENERAL PUBLIC LICENSE VERSION THREE\n";
 	renderText(renderer, tileSheet, 200, 200, endScreenSuccess);
 }
 
-//Goal
-//for now just a simple rect
+// Goal
+// for now just a simple rect
 //
 
 typedef SDL_Rect Goal;
 
-static void renderGoal(SDL_Renderer* renderer, Camera* camera, Goal* goal){
-
-        SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
-        SDL_Rect goalVis = {(int)(goal->x - camera->x),(int) ((float)goal->y - camera->y), (int)goal->w, (int)goal->h};
-        SDL_RenderFillRect(renderer, &goalVis);
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+static void renderGoal(SDL_Renderer* renderer, Camera* camera, Goal* goal)
+{
+	SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+	SDL_Rect goalVis = {(int)(goal->x - camera->x), (int)((float)goal->y - camera->y), (int)goal->w,
+	                    (int)goal->h};
+	SDL_RenderFillRect(renderer, &goalVis);
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 }
 
-bool pointInRect(Vec2* point, SDL_Rect * rect){
-    return point->x > rect->x && point->x < (rect->x+rect->w) 
-            &&point->y > rect->y && point->y < (rect->y+rect->h);
+bool pointInRect(Vec2* point, SDL_Rect* rect)
+{
+	return point->x > rect->x && point->x < (rect->x + rect->w) && point->y > rect->y &&
+	       point->y < (rect->y + rect->h);
 }
 
-bool CheckGoalSatisfied(Vec2* playerPos, GridSpace* playerShip,Goal * goal){
-    //aligned box collision WILL BREAK IF WE EVER ROTATE ANYTHING
-    Vec2 goalTL = {(float) goal->x, (float)goal->y};
-    Vec2 goalTR = {(float)(goal->x + goal->w),(float) goal->y};
-    Vec2 goalBL = {(float )goal->x, (float)(goal->y + goal->h)};
-    Vec2 goalBR = {(float)(goal->x+goal->w), (float)(goal->y + goal->h)};
+bool CheckGoalSatisfied(Vec2* playerPos, GridSpace* playerShip, Goal* goal)
+{
+	// aligned box collision WILL BREAK IF WE EVER ROTATE ANYTHING
+	Vec2 goalTL = {(float)goal->x, (float)goal->y};
+	Vec2 goalTR = {(float)(goal->x + goal->w), (float)goal->y};
+	Vec2 goalBL = {(float)goal->x, (float)(goal->y + goal->h)};
+	Vec2 goalBR = {(float)(goal->x + goal->w), (float)(goal->y + goal->h)};
 
-    int playerWidth =  playerShip->width*c_tileSize;
-    int playerHeight =  playerShip->height*c_tileSize;
+	int playerWidth = playerShip->width * c_tileSize;
+	int playerHeight = playerShip->height * c_tileSize;
 
-    Vec2 playerTR = {(playerPos->x + playerWidth), (float)playerPos->y};
-    Vec2 playerBL = {(float)playerPos->x, (float)(playerPos->y + playerHeight)};
-    Vec2 playerBR = {(float)(playerPos->x + playerWidth),(float) (playerPos->y + playerHeight)};
+	Vec2 playerTR = {(playerPos->x + playerWidth), (float)playerPos->y};
+	Vec2 playerBL = {(float)playerPos->x, (float)(playerPos->y + playerHeight)};
+	Vec2 playerBR = {(float)(playerPos->x + playerWidth), (float)(playerPos->y + playerHeight)};
 
+	SDL_Rect playerBoundingBox = {(int)playerPos->x, (int)playerPos->y, playerWidth, playerHeight};
 
-    SDL_Rect playerBoundingBox = {(int)playerPos->x, (int)playerPos->y, playerWidth, playerHeight };
-
-
-    return pointInRect(&goalTL,&playerBoundingBox) || pointInRect(&goalTR,&playerBoundingBox)
-        || pointInRect(&goalBL, &playerBoundingBox) || pointInRect(&goalBR,&playerBoundingBox)||
-        pointInRect(playerPos,goal) || pointInRect(&playerTR,goal) || pointInRect(&playerBL,goal) 
-        || pointInRect(&playerBR,goal);
-     
+	return pointInRect(&goalTL, &playerBoundingBox) || pointInRect(&goalTR, &playerBoundingBox) ||
+	       pointInRect(&goalBL, &playerBoundingBox) || pointInRect(&goalBR, &playerBoundingBox) ||
+	       pointInRect(playerPos, goal) || pointInRect(&playerTR, goal) ||
+	       pointInRect(&playerBL, goal) || pointInRect(&playerBR, goal);
 }
 
-
-iVec2 toMiniMapCoordinates(float worldCoordX, float worldCoordY){
-    float nWorldCoordX = worldCoordX/c_spaceSize;
-    float nWorldCoordY = worldCoordY/c_spaceSize;
-    return {(int)(nWorldCoordX*c_miniMapSize), (int)(nWorldCoordY*c_miniMapSize)};
+iVec2 toMiniMapCoordinates(float worldCoordX, float worldCoordY)
+{
+	float nWorldCoordX = worldCoordX / c_spaceSize;
+	float nWorldCoordY = worldCoordY / c_spaceSize;
+	return {(int)(nWorldCoordX * c_miniMapSize), (int)(nWorldCoordY * c_miniMapSize)};
 }
 
-SDL_Rect scaleRectToMinimap(float x, float y, float w, float h){
-    iVec2 miniMapXY = toMiniMapCoordinates(x,y);
-    iVec2 miniMapWH = toMiniMapCoordinates(w,h);
+SDL_Rect scaleRectToMinimap(float x, float y, float w, float h)
+{
+	iVec2 miniMapXY = toMiniMapCoordinates(x, y);
+	iVec2 miniMapWH = toMiniMapCoordinates(w, h);
 
-    if(miniMapWH.x == 0)
-        miniMapWH.x = 1;
+	if (miniMapWH.x == 0)
+		miniMapWH.x = 1;
 
-    if(miniMapWH.y == 0)
-        miniMapWH.y = 1;
-        
-    return {miniMapXY.x, miniMapXY.y, miniMapWH.x, miniMapWH.y};
+	if (miniMapWH.y == 0)
+		miniMapWH.y = 1;
+
+	return {miniMapXY.x, miniMapXY.y, miniMapWH.x, miniMapWH.y};
 }
 
-//MiniMap
+// MiniMap
 
 void renderMiniMap(SDL_Renderer* renderer, int windowWidth, int windowHeight, Vec2* playerPos,
                    GridSpace* playerShip, Goal* goal)
 {
 	const int miniMapMargin = 10;
 	int miniMapX = windowWidth - c_miniMapSize - miniMapMargin;
-    int miniMapY = windowHeight - c_miniMapSize - miniMapMargin;
+	int miniMapY = windowHeight - c_miniMapSize - miniMapMargin;
 
-    SDL_Rect miniPlayer = scaleRectToMinimap(playerPos->x, playerPos->y, playerShip->width*c_tileSize, playerShip->height*c_tileSize);
-    SDL_Rect miniGoal = scaleRectToMinimap(goal->x, goal->y, goal->w, goal->h);
+	SDL_Rect miniPlayer =
+	    scaleRectToMinimap(playerPos->x, playerPos->y, playerShip->width * c_tileSize,
+	                       playerShip->height * c_tileSize);
+	SDL_Rect miniGoal = scaleRectToMinimap(goal->x, goal->y, goal->w, goal->h);
 
-    miniPlayer.x +=miniMapX;
-    miniPlayer.y += miniMapY;
+	miniPlayer.x += miniMapX;
+	miniPlayer.y += miniMapY;
 
-    miniGoal.x +=miniMapX;
-    miniGoal.y +=miniMapY;
-    miniGoal.w = 4; 
-    miniGoal.h = 4; 
+	miniGoal.x += miniMapX;
+	miniGoal.y += miniMapY;
+	miniGoal.w = 4;
+	miniGoal.h = 4;
 
+	SDL_Rect miniMapBounds = {miniMapX, miniMapY, c_miniMapSize, c_miniMapSize};
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+	SDL_RenderFillRect(renderer, &miniMapBounds);
+	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+	SDL_RenderDrawRect(renderer, &miniMapBounds);
 
-    SDL_Rect miniMapBounds = {miniMapX,miniMapY, c_miniMapSize, c_miniMapSize};
-    SDL_SetRenderDrawColor(renderer,0,0,0,255);
-    SDL_RenderFillRect(renderer, &miniMapBounds);
-    SDL_SetRenderDrawColor(renderer,255,255,255,255);
-    SDL_RenderDrawRect(renderer, &miniMapBounds);
+	SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+	SDL_RenderFillRect(renderer, &miniPlayer);
 
-    SDL_SetRenderDrawColor(renderer,255,0,0,255);
-    SDL_RenderFillRect(renderer, &miniPlayer);
+	SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+	SDL_RenderFillRect(renderer, &miniGoal);
 
-    SDL_SetRenderDrawColor(renderer,0,255,0,255);
-    SDL_RenderFillRect(renderer, &miniGoal);
-
-    SDL_SetRenderDrawColor(renderer,0,0,0,255);
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
 	for (int i = 0; i < ARRAY_SIZE(objects); i++)
 	{
 		Object* currentObject = &objects[i];
 		if (!currentObject->type)
-    		continue;
-        iVec2 miniMapObjPos = toMiniMapCoordinates(currentObject->body.position.x, currentObject->body.position.y);
-        miniMapObjPos.x +=miniMapX;
-        miniMapObjPos.y +=miniMapY;
-        SDL_Rect miniObj = {miniMapObjPos.x, miniMapObjPos.y,4,4};
-        SDL_SetRenderDrawColor(renderer,0,0,255,255);
-        SDL_RenderFillRect(renderer, &miniObj);
-    }
+			continue;
+		iVec2 miniMapObjPos =
+		    toMiniMapCoordinates(currentObject->body.position.x, currentObject->body.position.y);
+		miniMapObjPos.x += miniMapX;
+		miniMapObjPos.y += miniMapY;
+		SDL_Rect miniObj = {miniMapObjPos.x, miniMapObjPos.y, 4, 4};
+		SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
+		SDL_RenderFillRect(renderer, &miniObj);
+	}
 }
 
 //
@@ -1213,13 +1217,13 @@ int main(int numArguments, char** arguments)
 	                           // Furnace
 	                           {'f', 2, 1, TextureTransform_None},
 	                           // Intake from right
-							   {'R', 2, 0, TextureTransform_None},
-							   // Intake from left
-							   {'L', 2, 0, TextureTransform_FlipHorizontal},
-							   // Intake from top
-							   {'U', 2, 0, TextureTransform_CounterClockwise90},
-							   // Intake from bottom
-							   {'D', 2, 0, TextureTransform_Clockwise90},
+	                           {'R', 2, 0, TextureTransform_None},
+	                           // Intake from left
+	                           {'L', 2, 0, TextureTransform_FlipHorizontal},
+	                           // Intake from top
+	                           {'U', 2, 0, TextureTransform_CounterClockwise90},
+	                           // Intake from bottom
+	                           {'D', 2, 0, TextureTransform_Clockwise90},
 	                           // Engine to left (unpowered)
 	                           {'l', 1, 1, TextureTransform_FlipHorizontal},
 	                           {'r', 1, 1, TextureTransform_None},
@@ -1257,17 +1261,18 @@ int main(int numArguments, char** arguments)
 	// snap the camera to the player postion
 	Camera camera;
 	camera.x = playerPhys.position.x - (windowWidth / 2) + (playerShipData.width * c_tileSize) / 2;
-	camera.y = playerPhys.position.y - (windowHeight / 2) + (playerShipData.height * c_tileSize) / 2;
+	camera.y =
+	    playerPhys.position.y - (windowHeight / 2) + (playerShipData.height * c_tileSize) / 2;
 	camera.w = windowWidth;
 	camera.h = windowHeight;
 
 	srand(time(NULL));
 
-    Goal goal;
-    goal.x = rand() % c_spaceSize;
-    goal.y = rand() % c_spaceSize;
-    goal.w = c_goalSize;
-    goal.h = c_goalSize;
+	Goal goal;
+	goal.x = rand() % c_spaceSize;
+	goal.y = rand() % c_spaceSize;
+	goal.w = c_goalSize;
+	goal.h = c_goalSize;
 
 	// Make some objects
 	for (int i = 0; i < 400; ++i)
@@ -1386,13 +1391,14 @@ int main(int numArguments, char** arguments)
 
 		renderObjects(renderer, &tileSheet, &camera);
 
-        renderGoal(renderer,&camera,&goal);
+		renderGoal(renderer, &camera, &goal);
 
-        renderMiniMap(renderer, windowWidth, windowHeight, &playerPhys.position,playerShip,&goal);
+		renderMiniMap(renderer, windowWidth, windowHeight, &playerPhys.position, playerShip, &goal);
 
-        if(CheckGoalSatisfied(&playerPhys.position,playerShip,&goal)){
-            exitReason = "Achieved Goal!";
-        }
+		if (CheckGoalSatisfied(&playerPhys.position, playerShip, &goal))
+		{
+			exitReason = "Achieved Goal!";
+		}
 
 		// HUD
 		{
