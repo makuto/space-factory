@@ -1370,11 +1370,11 @@ int main(int numArguments, char** arguments)
 		int timeToCompleteSeconds;
 	} GamePhase;
 	GamePhase gamePhases[] = {
-	    {"CONSTRUCT YOUR SHIP", 60},     {"ENEMY RADAR SIGNAL DETECTED", 3},
-	    {"REACH RADAR DEADZONE 1", 20},  {"REACH RADAR DEADZONE 2", 18},
-	    {"ENEMY RADAR COOLING DOWN", 3}, {"MODIFY YOUR SHIP", 60},
-	    {"REACH RADAR DEADZONE 3", 15},  {"REACH RADAR DEADZONE 4", 10},
-	    {"REACH RADAR DEADZONE 5", 5},
+	    {"CONSTRUCT YOUR SHIP", 60},          {"ENEMY RADAR SIGNAL DETECTED", 3},
+	    {"REACH RADAR DEADZONE ALPHA", 20},   {"REACH RADAR DEADZONE BRAVO", 18},
+	    {"ENEMY RADAR OVERHEATED", 3},        {"MODIFY YOUR SHIP", 60},
+	    {"REACH RADAR DEADZONE CHARLIE", 15}, {"REACH RADAR DEADZONE DELTA", 10},
+	    {"REACH RADAR DEADZONE ECHO", 5},
 	};
 	int currentGamePhase = 0;
 	const Uint64 performanceNumTicksPerSecond = SDL_GetPerformanceFrequency();
