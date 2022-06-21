@@ -1586,6 +1586,7 @@ int main(int numArguments, char** arguments)
 	}
 
 	// Main loop
+	bool enableDebugUI = false;
 	const float c_simulateUpdateRate = 1.f / 60.f;
 	float accumulatedTime = 0.f;
 	Uint64 lastFrameNumTicks = SDL_GetPerformanceCounter();
@@ -1613,6 +1614,9 @@ int main(int numArguments, char** arguments)
 		{
 			exitReason = "Escape pressed";
 		}
+
+		if (currentKeyStates[SDL_SCANCODE_F1])
+			enableDebugUI = true;
 
 		int numSimulationUpdatesThisFrame = 0;
 		/* accumulatedTime = c_simulateUpdateRate;// Fixed update */
@@ -1810,7 +1814,8 @@ int main(int numArguments, char** arguments)
 			SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 		}
 
-		addRenderDiagnostics(renderer, deltaTime, numSimulationUpdatesThisFrame);
+		if (enableDebugUI)
+			addRenderDiagnostics(renderer, deltaTime, numSimulationUpdatesThisFrame);
 
 		lastFrameNumTicks = SDL_GetPerformanceCounter();
 		SDL_RenderPresent(renderer);
