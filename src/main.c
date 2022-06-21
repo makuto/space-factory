@@ -45,8 +45,10 @@ const int c_spawnBuffer = 100;
 // goal
 const int c_goalSize = 40;
 
+// On failure
 const float c_timeToShowFailedOverlay = 0.25f;
 const float c_timeToShowDamagedText = 1.f;
+const unsigned int c_perCellDamageRoll = 30;
 
 // minimap
 const int c_miniMapSize = 400;
@@ -385,6 +387,21 @@ RigidBody SpawnPlayerPhys()
 	player.velocity.x = 0.f;
 	player.velocity.y = 0.f;
 	return player;
+}
+
+void damageShip(GridSpace* gridSpace)
+{
+	for (int cellY = 0; cellY < gridSpace->height; ++cellY)
+	{
+		for (int cellX = 0; cellX < gridSpace->width; ++cellX)
+		{
+			GridCell* currentCell = &GridCellAt(gridSpace, cellX, cellY);
+			if (rand() % c_perCellDamageRoll == 1)
+			{
+				memset(currentCell, 0, sizeof(GridCell));
+			}
+		}
+	}
 }
 
 //
@@ -1567,6 +1584,8 @@ int main(int numArguments, char** arguments)
 					timeSinceFailedPhase = c_timeToShowFailedOverlay;
 					timeSinceFailedPhaseDamage = c_timeToShowDamagedText;
 					startNewPhase = true;
+
+					damageShip(playerShip);
 				}
 
 				if (timeSinceFailedPhase > 0.f)
