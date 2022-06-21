@@ -38,17 +38,23 @@ struct iVec2
 //
 // Constants
 //
+
+/* const int c_arbitraryDelayTimeMilliseconds = 10; */
+const char c_tileSize = 32;
+
 // space
 const int c_spaceSize = 10000;
-const int c_spawnBuffer = 100;
+const int c_spawnBuffer = c_spaceSize / 10; // 10% margins
 
 // goal
-const int c_goalSize = 40;
+const int c_goalSize = c_tileSize * 5;
+const int c_goalMinimapScaleFactor = 2;
 
 // On failure
 const float c_timeToShowFailedOverlay = 0.25f;
-const float c_timeToShowDamagedText = 1.f;
+const float c_timeToShowDamagedText = 3.f;
 const unsigned int c_perCellDamageRoll = 30;
+const unsigned char c_numSustainableDamagesBeforeGameOver = 2;
 
 // minimap
 const int c_miniMapSize = 400;
@@ -57,9 +63,6 @@ const int c_miniMapSize = 400;
 //
 typedef SDL_FRect Camera;
 const float c_cameraEaseFactor = 5.f;
-
-/* const int c_arbitraryDelayTimeMilliseconds = 10; */
-const char c_tileSize = 32;
 
 // Ship
 const float c_shipThrust = 300.f;
@@ -1106,6 +1109,15 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 	}
 }
 
+static void renderMainMenu(SDL_Renderer* renderer, TileSheet* tileSheet)
+{
+	// No sci-fi game is complete without some cheese
+	const char* text =
+	    "SPACE FACTORY\n\n\n"
+		"PRESS SPACE";
+	renderText(renderer, tileSheet, 200, 200, text);
+}
+
 static void doTutorial(SDL_Renderer* renderer, TileSheet* tileSheet)
 {
 	// No sci-fi game is complete without some cheese
@@ -1117,8 +1129,25 @@ static void doTutorial(SDL_Renderer* renderer, TileSheet* tileSheet)
 	    "CUSTOMIZE YOUR FACTORY TO MAXIMIZE EFFICIENCY\n"
 	    "EVERY SECOND COUNTS\n"
 	    "REACH THE TARGET LOCATIONS IN TIME TO AVOID DETECTION\n\n\n"
-	    "YOUR CREW DEPENDS ON YOU\n";
+	    "YOUR CREW DEPENDS ON YOU\n\n\n"
+		"PRESS THE SPACE KEY TO CONTINUE";
 	renderText(renderer, tileSheet, 200, 200, tutorialText);
+}
+
+static void doEndScreenFailure(SDL_Renderer* renderer, TileSheet* tileSheet)
+{
+	const char* endScreenFailure =
+	    "YOUR SHIP HAS BEEN DESTROYED\n\n"
+	    "YOU AND YOUR CREW DRIFT INTO EMPTY SPACE\n\n"
+	    "BUT YOU KNOW THIS IS ONLY THE BEGINNING\n"
+	    "\n\n\n\n"
+	    "THANK YOU FOR PLAYING\n\n"
+	    "CREATED BY\n"
+	    "MACOY MADSON\n"
+	    "WILL CHAMBERS\n\n"
+	    "COPYRIGHT TWENTY TWENTY TWO\n"
+	    "AVAILABLE UNDER TERMS OF GNU GENERAL PUBLIC LICENSE VERSION THREE\n";
+	renderText(renderer, tileSheet, 400, 200, endScreenFailure);
 }
 
 static void doEndScreenSuccess(SDL_Renderer* renderer, TileSheet* tileSheet)
@@ -1145,10 +1174,12 @@ typedef SDL_Rect Goal;
 
 static void renderGoal(SDL_Renderer* renderer, Camera* camera, Goal* goal)
 {
-	SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+	SDL_SetRenderDrawColor(renderer, 84, 211, 115, 155);
 	SDL_Rect goalVis = {(int)(goal->x - camera->x), (int)((float)goal->y - camera->y), (int)goal->w,
 	                    (int)goal->h};
+	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 	SDL_RenderFillRect(renderer, &goalVis);
+	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 }
 
@@ -1219,20 +1250,19 @@ void renderMiniMap(SDL_Renderer* renderer, int windowWidth, int windowHeight, Ve
 	SDL_Rect miniMapBounds = {miniMapX, miniMapY, c_miniMapSize, c_miniMapSize};
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 	SDL_RenderFillRect(renderer, &miniMapBounds);
-	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+	SDL_SetRenderDrawColor(renderer, 240, 240, 240, 255);
 	SDL_RenderDrawRect(renderer, &miniMapBounds);
 
-	SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+	SDL_SetRenderDrawColor(renderer, 211, 100, 84, 255);
 	SDL_RenderFillRect(renderer, &miniPlayer);
 
 	if (goal)
 	{
-		SDL_Rect miniGoal = scaleRectToMinimap(goal->x, goal->y, goal->w, goal->h);
+		SDL_Rect miniGoal = scaleRectToMinimap(goal->x, goal->y, goal->w * c_goalMinimapScaleFactor,
+		                                       goal->h * c_goalMinimapScaleFactor);
 		miniGoal.x += miniMapX;
 		miniGoal.y += miniMapY;
-		miniGoal.w = 4;
-		miniGoal.h = 4;
-		SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+		SDL_SetRenderDrawColor(renderer, 84, 211, 115, 255);
 		SDL_RenderFillRect(renderer, &miniGoal);
 	}
 
@@ -1248,7 +1278,7 @@ void renderMiniMap(SDL_Renderer* renderer, int windowWidth, int windowHeight, Ve
 		miniMapObjPos.x += miniMapX;
 		miniMapObjPos.y += miniMapY;
 		SDL_Rect miniObj = {miniMapObjPos.x, miniMapObjPos.y, 4, 4};
-		SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
+		SDL_SetRenderDrawColor(renderer, 84, 103, 211, 255);
 		SDL_RenderFillRect(renderer, &miniObj);
 	}
 }
@@ -1257,6 +1287,57 @@ void renderMiniMap(SDL_Renderer* renderer, int windowWidth, int windowHeight, Ve
 //
 // Main
 //
+
+// Returns whether the game should be played
+bool doMainMenu(SDL_Window* window, SDL_Renderer* renderer, TileSheet* tileSheet)
+{
+	bool spaceDown = false;
+	char spacePressed = 0;
+	while (1)
+	{
+		SDL_Event event;
+		while (SDL_PollEvent((&event)))
+		{
+			if ((event.type == SDL_QUIT))
+			{
+				return false;
+			}
+		}
+
+		const Uint8* currentKeyStates = SDL_GetKeyboardState(NULL);
+		if (currentKeyStates[SDL_SCANCODE_ESCAPE])
+			return false;
+
+		if (currentKeyStates[SDL_SCANCODE_SPACE])
+		{
+			if (!spaceDown)
+				++spacePressed;
+			spaceDown = true;
+		}
+		else
+			spaceDown = false;
+
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+		SDL_RenderClear(renderer);
+
+		switch (spacePressed)
+		{
+			case 0:
+				renderMainMenu(renderer, tileSheet);
+				break;
+			case 1:
+				doTutorial(renderer, tileSheet);
+				break;
+			case 2:
+				return true;
+				break;
+		}
+
+		SDL_RenderPresent(renderer);
+		SDL_UpdateWindowSurface(window);
+	}
+	return false;
+}
 
 int main(int numArguments, char** arguments)
 {
@@ -1351,6 +1432,9 @@ int main(int numArguments, char** arguments)
 	                       },
 	                       tileSheetTexture};
 
+	if (!doMainMenu(window, renderer, &tileSheet))
+		return 0;
+
 	// Make some grids
 	GridSpace playerShipData = {0};
 	playerShipData.width = 18;
@@ -1399,12 +1483,12 @@ int main(int numArguments, char** arguments)
 		Objective objective;
 	} GamePhase;
 	GamePhase gamePhases[] = {
-	    {"CONSTRUCT YOUR SHIP", 10, Objective_None},
+	    {"CONSTRUCT YOUR SHIP", 60, Objective_None},
 	    {"ENEMY RADAR SIGNAL DETECTED", 3, Objective_None},
-	    {"REACH RADAR DEADZONE ALPHA", 20, Objective_ReachGoalPoint},
+	    {"REACH RADAR DEADZONE ALPHA", 2, Objective_ReachGoalPoint},
 	    {"REACH RADAR DEADZONE BRAVO", 18, Objective_ReachGoalPoint},
-	    {"ENEMY RADAR OVERHEATED", 3, Objective_None},
-	    {"MODIFY YOUR SHIP", 60, Objective_None},
+	    {"ENEMY RADAR IN COOLDOWN", 3, Objective_None},
+	    {"REFIT YOUR SHIP", 30, Objective_None},
 	    {"REACH RADAR DEADZONE CHARLIE", 15, Objective_ReachGoalPoint},
 	    {"REACH RADAR DEADZONE DELTA", 10, Objective_ReachGoalPoint},
 	    {"REACH RADAR DEADZONE ECHO", 5, Objective_ReachGoalPoint},
@@ -1413,6 +1497,9 @@ int main(int numArguments, char** arguments)
 	const Uint64 performanceNumTicksPerSecond = SDL_GetPerformanceFrequency();
 	Uint64 gamePhaseStartTicks = SDL_GetPerformanceCounter();
 	int startPhaseSeconds = gamePhaseStartTicks / performanceNumTicksPerSecond;
+	unsigned char numDamagesSustained = 0;
+	float timeSinceFailedPhase = 0.f;
+	float timeSinceFailedPhaseDamage = 0.f;
 
 	// Make some objects
 	for (int i = 0; i < 400; ++i)
@@ -1530,20 +1617,21 @@ int main(int numArguments, char** arguments)
 
 		renderObjects(renderer, &tileSheet, &camera);
 
-		renderMiniMap(
-		    renderer, windowWidth, windowHeight, &playerPhys.position, playerShip,
-		    gamePhases[currentGamePhase].objective == Objective_ReachGoalPoint ? &goal : NULL);
-
-		bool startNewPhase = false;
-		if (gamePhases[currentGamePhase].objective == Objective_ReachGoalPoint)
-		{
-			renderGoal(renderer, &camera, &goal);
-			if (CheckGoalSatisfied(&playerPhys.position, playerShip, &goal))
-				startNewPhase = true;
-		}
-
 		// HUD
+		if (numDamagesSustained > c_numSustainableDamagesBeforeGameOver)
 		{
+			doEndScreenFailure(renderer, &tileSheet);
+		}
+		else if (currentGamePhase >= ARRAY_SIZE(gamePhases))
+		{
+			doEndScreenSuccess(renderer, &tileSheet);
+		}
+		else
+		{
+			renderMiniMap(
+			    renderer, windowWidth, windowHeight, &playerPhys.position, playerShip,
+			    gamePhases[currentGamePhase].objective == Objective_ReachGoalPoint ? &goal : NULL);
+
 			int playerVelocity = (int)(Magnitude(&playerPhys.velocity));
 			renderNumber(renderer, &tileSheet, 100, 100, playerVelocity);
 			renderText(renderer, &tileSheet, 100, 80, "VELOCITY");
@@ -1554,6 +1642,14 @@ int main(int numArguments, char** arguments)
 
 			if (currentGamePhase < ARRAY_SIZE(gamePhases))
 			{
+				bool startNewPhase = false;
+				if (gamePhases[currentGamePhase].objective == Objective_ReachGoalPoint)
+				{
+					renderGoal(renderer, &camera, &goal);
+					if (CheckGoalSatisfied(&playerPhys.position, playerShip, &goal))
+						startNewPhase = true;
+				}
+
 				Uint64 currentGamePhaseTicks = SDL_GetPerformanceCounter();
 				int currentSeconds = currentGamePhaseTicks / performanceNumTicksPerSecond;
 				int secondsInCurrentPhase = currentSeconds - startPhaseSeconds;
@@ -1577,8 +1673,6 @@ int main(int numArguments, char** arguments)
 					}
 				}
 
-				static float timeSinceFailedPhase = 0.f;
-				static float timeSinceFailedPhaseDamage = 0.f;
 				if (failedPhase)
 				{
 					timeSinceFailedPhase = c_timeToShowFailedOverlay;
@@ -1586,19 +1680,7 @@ int main(int numArguments, char** arguments)
 					startNewPhase = true;
 
 					damageShip(playerShip);
-				}
-
-				if (timeSinceFailedPhase > 0.f)
-				{
-					timeSinceFailedPhase -= 1.f * deltaTime;
-					if (timeSinceFailedPhase < 0.f)
-						timeSinceFailedPhase = 0.f;
-					SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-					SDL_SetRenderDrawColor(renderer, 255, 255, 255,
-					                       (255 * timeSinceFailedPhase) / c_timeToShowFailedOverlay);
-					SDL_Rect fullScreenRect = {0, 0, windowWidth, windowHeight};
-					SDL_RenderFillRect(renderer, &fullScreenRect);
-					SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+					++numDamagesSustained;
 				}
 
 				if (timeSinceFailedPhaseDamage > 0.f)
@@ -1608,6 +1690,8 @@ int main(int numArguments, char** arguments)
 						timeSinceFailedPhaseDamage = 0.f;
 
 					renderText(renderer, &tileSheet, 100, 300, "DAMAGE DAMAGE DAMAGE");
+					if (numDamagesSustained == c_numSustainableDamagesBeforeGameOver)
+						renderText(renderer, &tileSheet, 100, 320, "WE WILL NOT SURVIVE ANOTHER HIT");
 				}
 
 				if (startNewPhase)
@@ -1616,19 +1700,30 @@ int main(int numArguments, char** arguments)
 					++currentGamePhase;
 					if (gamePhases[currentGamePhase].objective == Objective_ReachGoalPoint)
 					{
-						goal.x = rand() % (c_spaceSize - c_spawnBuffer);
-						goal.y = rand() % (c_spaceSize - c_spawnBuffer);
+						goal.x = (rand() % (c_spaceSize - (c_spawnBuffer * 2))) + c_spawnBuffer;
+						goal.y = (rand() % (c_spaceSize - (c_spawnBuffer * 2))) + c_spawnBuffer;
 					}
 				}
 			}
 
-			/* doTutorial(renderer, &tileSheet); */
-			/* doEndScreenSuccess(renderer, &tileSheet); */
+			Vec2 cameraPosition = {(float)camera.x, (float)camera.y};
+			doEditUI(renderer, &tileSheet, windowWidth, windowHeight, cameraPosition,
+			         playerPhys.position, &playerShipData);
 		}
 
-		Vec2 cameraPosition = {(float)camera.x, (float)camera.y};
-		doEditUI(renderer, &tileSheet, windowWidth, windowHeight, cameraPosition,
-		         playerPhys.position, &playerShipData);
+		// Draw this even after the game is over
+		if (timeSinceFailedPhase > 0.f)
+		{
+			timeSinceFailedPhase -= 1.f * deltaTime;
+			if (timeSinceFailedPhase < 0.f)
+				timeSinceFailedPhase = 0.f;
+			SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+			SDL_SetRenderDrawColor(renderer, 255, 255, 255,
+			                       (255 * timeSinceFailedPhase) / c_timeToShowFailedOverlay);
+			SDL_Rect fullScreenRect = {0, 0, windowWidth, windowHeight};
+			SDL_RenderFillRect(renderer, &fullScreenRect);
+			SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+		}
 
 		lastFrameNumTicks = SDL_GetPerformanceCounter();
 		SDL_RenderPresent(renderer);
