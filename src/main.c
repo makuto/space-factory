@@ -377,8 +377,8 @@ void UpdatePhysics(RigidBody* object, float drag, float dt)
 RigidBody SpawnPlayerPhys()
 {
 	RigidBody player;
-	player.position.x = c_spaceSize/2;
-	player.position.y = c_spaceSize/2;
+	player.position.x = c_spaceSize / 2;
+	player.position.y = c_spaceSize / 2;
 	player.velocity.x = 0.f;
 	player.velocity.y = 0.f;
 	return player;
@@ -628,10 +628,11 @@ void snapCameraToGrid(Camera* camera, Vec2* position, GridSpace* grid, float del
 	float x = position->x + (grid->width * c_tileSize) / 2;
 	float y = position->y + (grid->height * c_tileSize) / 2;
 
-    if((camera->x - x - camera->w/2) > 10 ||(camera->y - y -camera->h/2) > 10 ){
-        camera->x = (x - camera->w/2);
-        camera->y = (y - camera->h/2);
-    }
+	if ((camera->x - x - camera->w / 2) > 10 || (camera->y - y - camera->h / 2) > 10)
+	{
+		camera->x = (x - camera->w / 2);
+		camera->y = (y - camera->h / 2);
+	}
 
 	float cameraOffsetX = (camera->w / 2.f);
 	float cameraOffsetY = (camera->h / 2.f);
@@ -1107,8 +1108,8 @@ static void doEndScreenSuccess(SDL_Renderer* renderer, TileSheet* tileSheet)
 	    "YOUR EXHAUSTED CREW CELEBRATES\n\n"
 	    "BUT YOU KNOW THIS IS ONLY THE BEGINNING\n"
 	    "\n\n\n\n"
-		"THANK YOU FOR PLAYING\n\n"
-		"CREATED BY\n"
+	    "THANK YOU FOR PLAYING\n\n"
+	    "CREATED BY\n"
 	    "MACOY MADSON\n"
 	    "WILL CHAMBERS\n\n"
 	    "COPYRIGHT TWENTY TWENTY TWO\n"
@@ -1376,7 +1377,7 @@ int main(int numArguments, char** arguments)
 		Objective requirement;
 	} GamePhase;
 	GamePhase gamePhases[] = {
-	    {"CONSTRUCT YOUR SHIP", 60, Objective_None},
+	    {"CONSTRUCT YOUR SHIP", 10, Objective_None},
 	    {"ENEMY RADAR SIGNAL DETECTED", 3, Objective_None},
 	    {"REACH RADAR DEADZONE ALPHA", 20, Objective_ReachGoalPoint},
 	    {"REACH RADAR DEADZONE BRAVO", 18, Objective_ReachGoalPoint},
@@ -1389,7 +1390,7 @@ int main(int numArguments, char** arguments)
 	int currentGamePhase = 0;
 	const Uint64 performanceNumTicksPerSecond = SDL_GetPerformanceFrequency();
 	Uint64 gamePhaseStartTicks = SDL_GetPerformanceCounter();
-	int sinceStartSeconds = gamePhaseStartTicks / performanceNumTicksPerSecond;
+	int startPhaseSeconds = gamePhaseStartTicks / performanceNumTicksPerSecond;
 
 	// Make some objects
 	for (int i = 0; i < 400; ++i)
@@ -1511,10 +1512,11 @@ int main(int numArguments, char** arguments)
 
 		renderMiniMap(renderer, windowWidth, windowHeight, &playerPhys.position, playerShip, &goal);
 
-        if(CheckGoalSatisfied(&playerPhys.position,playerShip,&goal)){
-            goal.x = rand() % (c_spaceSize - c_spawnBuffer);
-            goal.y = rand() % (c_spaceSize - c_spawnBuffer);
-        }
+		if (CheckGoalSatisfied(&playerPhys.position, playerShip, &goal))
+		{
+			goal.x = rand() % (c_spaceSize - c_spawnBuffer);
+			goal.y = rand() % (c_spaceSize - c_spawnBuffer);
+		}
 
 		// HUD
 		{
@@ -1526,22 +1528,20 @@ int main(int numArguments, char** arguments)
 			if (playerVelocity >= (int)c_maxSpeed)
 				renderText(renderer, &tileSheet, 100, 60, "WARNING   MAX VELOCITY REACHED");
 
-			Uint64 currentGamePhaseTicks = SDL_GetPerformanceCounter();
-			int currentSeconds = currentGamePhaseTicks / performanceNumTicksPerSecond;
-			int phaseSeconds = 0;
-			for (int i = 0; i < ARRAY_SIZE(gamePhases); ++i)
+			if (currentGamePhase < ARRAY_SIZE(gamePhases))
 			{
-				GamePhase* phase = &gamePhases[i];
-				if (currentSeconds <
-				    phase->timeToCompleteSeconds + phaseSeconds + sinceStartSeconds)
+				Uint64 currentGamePhaseTicks = SDL_GetPerformanceCounter();
+				int currentSeconds = currentGamePhaseTicks / performanceNumTicksPerSecond;
+				int secondsInCurrentPhase = currentSeconds - startPhaseSeconds;
+				GamePhase* phase = &gamePhases[currentGamePhase];
+				renderText(renderer, &tileSheet, 100, 120, phase->prompt);
+				renderNumber(renderer, &tileSheet, 100, 140,
+				             phase->timeToCompleteSeconds - secondsInCurrentPhase);
+				if (secondsInCurrentPhase >= phase->timeToCompleteSeconds)
 				{
-					renderText(renderer, &tileSheet, 100, 120, phase->prompt);
-					renderNumber(renderer, &tileSheet, 100, 140,
-					             (phase->timeToCompleteSeconds + phaseSeconds + sinceStartSeconds) -
-					                 currentSeconds);
-					break;
+					startPhaseSeconds = currentSeconds;
+					++currentGamePhase;
 				}
-				phaseSeconds += phase->timeToCompleteSeconds;
 			}
 
 			/* doTutorial(renderer, &tileSheet); */
