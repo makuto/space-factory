@@ -173,9 +173,9 @@ bool isEngineTile(unsigned char c)
 	return c == 'u' || c == 'l' || c == 'r' || c == 'd';
 }
 
-static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int originY,
-                                         SDL_Renderer* renderer, TileSheet* tileSheet,
-                                         Camera* camera)
+static void renderGridSpaceFromTileSheet(SDL_Renderer* renderer, TileSheet* tileSheet,
+                                         GridSpace* gridSpace, int originX, int originY,
+                                         int cameraX, int cameraY)
 {
 	for (int cellY = 0; cellY < gridSpace->height; ++cellY)
 	{
@@ -192,8 +192,8 @@ static void renderGridSpaceFromTileSheet(GridSpace* gridSpace, int originX, int 
 
 				int textureX = association->column * c_tileSize;
 				int textureY = association->row * c_tileSize;
-				int screenX = originX + (cellX * c_tileSize) - camera->x;
-				int screenY = originY + (cellY * c_tileSize) - camera->y;
+				int screenX = originX + (cellX * c_tileSize) - cameraX;
+				int screenY = originY + (cellY * c_tileSize) - cameraY;
 				if (isEngineTile(tileToFind))
 				{
 					// if this is an engine tile, and its firing, swap the off sprite for the on
@@ -1701,8 +1701,11 @@ int main(int numArguments, char** arguments)
 
 		renderStarField(renderer, &camera, windowWidth, windowHeight);
 
-		renderGridSpaceFromTileSheet(playerShip, playerPhys.position.x, playerPhys.position.y,
-		                             renderer, &tileSheet, &camera);
+		// Note: SDL doesn't render at a subpixel level, so we cast away the floating point of the
+		// camera to ensure our tiles will be at exact pixels. If we didn't do this, we would get
+		// seams due to floating point inaccuracies.
+		renderGridSpaceFromTileSheet(renderer, &tileSheet, playerShip, playerPhys.position.x,
+		                             playerPhys.position.y, (int)camera.x, (int)camera.y);
 
 		renderObjects(renderer, &tileSheet, &camera);
 
