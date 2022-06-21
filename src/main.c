@@ -560,6 +560,20 @@ void doFactory(GridSpace* gridSpace, float deltaTime)
 			GridCell* cell = &GridCellAt(gridSpace, cellX, cellY);
 			switch (cell->type)
 			{
+				// Destroy anything that touches empty spaces. Usually only from ship damage
+				case 0:
+				{
+					for (int i = 0; i < ARRAY_SIZE(objects); ++i)
+					{
+						Object* currentObject = &objects[i];
+						if (!currentObject->type || currentObject->tileX != cellX ||
+						    currentObject->tileY != cellY || !currentObject->inFactory)
+							continue;
+						currentObject->type = 0;
+					}
+					break;
+				}
+
 				case 'L':
 				case 'R':
 				case 'U':
@@ -1485,7 +1499,7 @@ int main(int numArguments, char** arguments)
 	GamePhase gamePhases[] = {
 	    {"CONSTRUCT YOUR SHIP", 60, Objective_None},
 	    {"ENEMY RADAR SIGNAL DETECTED", 3, Objective_None},
-	    {"REACH RADAR DEADZONE ALPHA", 2, Objective_ReachGoalPoint},
+	    {"REACH RADAR DEADZONE ALPHA", 20, Objective_ReachGoalPoint},
 	    {"REACH RADAR DEADZONE BRAVO", 18, Objective_ReachGoalPoint},
 	    {"ENEMY RADAR IN COOLDOWN", 3, Objective_None},
 	    {"REFIT YOUR SHIP", 30, Objective_None},
