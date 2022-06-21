@@ -63,6 +63,7 @@ const int c_miniMapSize = 400;
 //
 typedef SDL_FRect Camera;
 const float c_cameraEaseFactor = 5.f;
+const bool c_enableCameraSmoothing = false;
 
 // Ship
 const float c_shipThrust = 300.f;
@@ -695,8 +696,17 @@ void snapCameraToGrid(Camera* camera, Vec2* position, GridSpace* grid, float del
 	/* } */
 	/* averageDelta[0] /= ARRAY_SIZE(deltaSmoothing); */
 	/* averageDelta[1] /= ARRAY_SIZE(deltaSmoothing); */
-	camera->x += deltaX * c_cameraEaseFactor * deltaTime;
-	camera->y += deltaY * c_cameraEaseFactor * deltaTime;
+	// Smoothing
+	if (c_enableCameraSmoothing)
+	{
+		camera->x += deltaX * c_cameraEaseFactor * deltaTime;
+		camera->y += deltaY * c_cameraEaseFactor * deltaTime;
+	}
+	else
+	{
+		camera->x += deltaX;
+		camera->y += deltaY;
+	}
 	camera->x -= cameraOffsetX;
 	camera->y -= cameraOffsetY;
 
@@ -1366,6 +1376,43 @@ bool doMainMenu(SDL_Window* window, SDL_Renderer* renderer, TileSheet* tileSheet
 	return false;
 }
 
+static void addRenderDiagnostics(SDL_Renderer* renderer, float deltaTime,
+                                 int numSimulationUpdatesThisFrame)
+{
+#define NUM_FRAME_TIMES 256
+	// Not actually used, only the points are used currently
+	static float s_frameTimes[NUM_FRAME_TIMES] = {0};
+	static SDL_FPoint s_frameRateGraph[NUM_FRAME_TIMES] = {0};
+	static SDL_FPoint s_simulationUpdateGraph[NUM_FRAME_TIMES] = {0};
+	static int writeTimeIndex = 0;
+
+	const int marginX = 5;
+	const int graphWidth = 512;
+	const int graphHeight = 512;
+
+	s_frameTimes[writeTimeIndex] = deltaTime;
+	s_frameRateGraph[writeTimeIndex].x =
+	    (writeTimeIndex * (graphWidth / ARRAY_SIZE(s_frameTimes))) + marginX;
+	/* s_frameRateGraph[writeTimeIndex].y = (deltaTime / (1.f / 60.f)) * graphHeight; */
+	s_frameRateGraph[writeTimeIndex].y = (deltaTime * graphHeight) / (1.f / 60.f);
+	s_simulationUpdateGraph[writeTimeIndex].x =
+	    (writeTimeIndex * (graphWidth / ARRAY_SIZE(s_frameTimes))) + marginX;
+	s_simulationUpdateGraph[writeTimeIndex].y = ((numSimulationUpdatesThisFrame * graphHeight) / 5);
+	++writeTimeIndex;
+	if (writeTimeIndex >= ARRAY_SIZE(s_frameTimes))
+		writeTimeIndex = 0;
+
+	SDL_SetRenderDrawColor(renderer, 10, 240, 10, 255);
+	SDL_RenderDrawPointsF(renderer, s_frameRateGraph, ARRAY_SIZE(s_frameRateGraph));
+
+	SDL_SetRenderDrawColor(renderer, 10, 240, 240, 255);
+	SDL_RenderDrawPointsF(renderer, s_simulationUpdateGraph, ARRAY_SIZE(s_simulationUpdateGraph));
+
+	SDL_SetRenderDrawColor(renderer, 240, 10, 10, 255);
+	const SDL_Point sixtyHertzLine[] = {{marginX, graphHeight}, {graphWidth + marginX, graphHeight}};
+	SDL_RenderDrawLines(renderer, sixtyHertzLine, ARRAY_SIZE(sixtyHertzLine));
+}
+
 int main(int numArguments, char** arguments)
 {
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
@@ -1384,8 +1431,7 @@ int main(int numArguments, char** arguments)
 	// Note: I had to set the driver to -1 so that a compatible one is automatically chosen.
 	// Otherwise, I get a window that doesn't vsync
 	sdlList2dRenderDrivers();
-	SDL_Renderer* renderer =
-	    SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 	if (!renderer)
 	{
 		sdlPrintError();
@@ -1540,6 +1586,8 @@ int main(int numArguments, char** arguments)
 	}
 
 	// Main loop
+	const float c_simulateUpdateRate = 1.f / 60.f;
+	float accumulatedTime = 0.f;
 	Uint64 lastFrameNumTicks = SDL_GetPerformanceCounter();
 	const char* exitReason = NULL;
 	while (!(exitReason))
@@ -1547,6 +1595,7 @@ int main(int numArguments, char** arguments)
 		Uint64 currentCounterTicks = SDL_GetPerformanceCounter();
 		Uint64 frameDiffTicks = (currentCounterTicks - lastFrameNumTicks);
 		float deltaTime = (frameDiffTicks / ((float)performanceNumTicksPerSecond));
+		accumulatedTime += deltaTime;
 
 		SDL_Event event;
 		while (SDL_PollEvent((&event)))
@@ -1565,75 +1614,84 @@ int main(int numArguments, char** arguments)
 			exitReason = "Escape pressed";
 		}
 
-		float shipThrust = c_shipThrust * deltaTime;
+		int numSimulationUpdatesThisFrame = 0;
+		/* accumulatedTime = c_simulateUpdateRate;// Fixed update */
+		while (accumulatedTime >= c_simulateUpdateRate)
+		{
+			++numSimulationUpdatesThisFrame;
+			float shipThrust = c_shipThrust * c_simulateUpdateRate;
 
-		if (currentKeyStates[SDL_SCANCODE_W] || currentKeyStates[SDL_SCANCODE_UP])
-		{
-			playerPhys.velocity.y +=
-			    -shipThrust * controlEnginesInDirection(&playerShipData, 'u', true);
-		}
-		else
-		{
-			controlEnginesInDirection(&playerShipData, 'u', false);
-		}
-		if (currentKeyStates[SDL_SCANCODE_S] || currentKeyStates[SDL_SCANCODE_DOWN])
-		{
-			playerPhys.velocity.y +=
-			    shipThrust * controlEnginesInDirection(&playerShipData, 'd', true);
-		}
-		else
-		{
-			controlEnginesInDirection(&playerShipData, 'd', false);
-		}
-		if (currentKeyStates[SDL_SCANCODE_A] || currentKeyStates[SDL_SCANCODE_LEFT])
-		{
-			playerPhys.velocity.x +=
-			    -shipThrust * controlEnginesInDirection(&playerShipData, 'r', true);
-		}
-		else
-		{
-			controlEnginesInDirection(&playerShipData, 'r', false);
-		}
-		if (currentKeyStates[SDL_SCANCODE_D] || currentKeyStates[SDL_SCANCODE_RIGHT])
-		{
-			playerPhys.velocity.x +=
-			    shipThrust * controlEnginesInDirection(&playerShipData, 'l', true);
-		}
-		else
-		{
-			controlEnginesInDirection(&playerShipData, 'l', false);
-		}
+			if (currentKeyStates[SDL_SCANCODE_W] || currentKeyStates[SDL_SCANCODE_UP])
+			{
+				playerPhys.velocity.y +=
+				    -shipThrust * controlEnginesInDirection(&playerShipData, 'u', true);
+			}
+			else
+			{
+				controlEnginesInDirection(&playerShipData, 'u', false);
+			}
+			if (currentKeyStates[SDL_SCANCODE_S] || currentKeyStates[SDL_SCANCODE_DOWN])
+			{
+				playerPhys.velocity.y +=
+				    shipThrust * controlEnginesInDirection(&playerShipData, 'd', true);
+			}
+			else
+			{
+				controlEnginesInDirection(&playerShipData, 'd', false);
+			}
+			if (currentKeyStates[SDL_SCANCODE_A] || currentKeyStates[SDL_SCANCODE_LEFT])
+			{
+				playerPhys.velocity.x +=
+				    -shipThrust * controlEnginesInDirection(&playerShipData, 'r', true);
+			}
+			else
+			{
+				controlEnginesInDirection(&playerShipData, 'r', false);
+			}
+			if (currentKeyStates[SDL_SCANCODE_D] || currentKeyStates[SDL_SCANCODE_RIGHT])
+			{
+				playerPhys.velocity.x +=
+				    shipThrust * controlEnginesInDirection(&playerShipData, 'l', true);
+			}
+			else
+			{
+				controlEnginesInDirection(&playerShipData, 'l', false);
+			}
 
-		updateEngineFuel(&playerShipData, deltaTime);
+			updateEngineFuel(&playerShipData, c_simulateUpdateRate);
 
-		bool playerAtMaxVelocity = false;
-		if (playerPhys.velocity.y > c_maxSpeed)
-		{
-			playerPhys.velocity.y = c_maxSpeed;
-			playerAtMaxVelocity = true;
-		}
-		if (playerPhys.velocity.y < -c_maxSpeed)
-		{
-			playerPhys.velocity.y = -c_maxSpeed;
-			playerAtMaxVelocity = true;
-		}
-		if (playerPhys.velocity.x > c_maxSpeed)
-		{
-			playerPhys.velocity.x = c_maxSpeed;
-			playerAtMaxVelocity = true;
-		}
-		if (playerPhys.velocity.x < -c_maxSpeed)
-		{
-			playerPhys.velocity.x = -c_maxSpeed;
-			playerAtMaxVelocity = true;
-		}
+			bool playerAtMaxVelocity = false;
+			if (playerPhys.velocity.y > c_maxSpeed)
+			{
+				playerPhys.velocity.y = c_maxSpeed;
+				playerAtMaxVelocity = true;
+			}
+			if (playerPhys.velocity.y < -c_maxSpeed)
+			{
+				playerPhys.velocity.y = -c_maxSpeed;
+				playerAtMaxVelocity = true;
+			}
+			if (playerPhys.velocity.x > c_maxSpeed)
+			{
+				playerPhys.velocity.x = c_maxSpeed;
+				playerAtMaxVelocity = true;
+			}
+			if (playerPhys.velocity.x < -c_maxSpeed)
+			{
+				playerPhys.velocity.x = -c_maxSpeed;
+				playerAtMaxVelocity = true;
+			}
 
-		UpdatePhysics(&playerPhys, c_playerDrag, deltaTime);
-		updateObjects(&playerPhys, &playerShipData, deltaTime);
+			UpdatePhysics(&playerPhys, c_playerDrag, c_simulateUpdateRate);
+			updateObjects(&playerPhys, &playerShipData, c_simulateUpdateRate);
 
-		doFactory(playerShip, deltaTime);
-		snapCameraToGrid(&camera, &playerPhys.position, playerShip, deltaTime);
+			doFactory(playerShip, c_simulateUpdateRate);
+			accumulatedTime -= c_simulateUpdateRate;
+		}
+		/* fprintf(stderr, "%d\n", numSimulationUpdatesThisFrame); */
+
 		// Rendering
+		snapCameraToGrid(&camera, &playerPhys.position, playerShip, deltaTime);
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		SDL_RenderClear(renderer);
 
@@ -1751,6 +1809,8 @@ int main(int numArguments, char** arguments)
 			SDL_RenderFillRect(renderer, &fullScreenRect);
 			SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 		}
+
+		addRenderDiagnostics(renderer, deltaTime, numSimulationUpdatesThisFrame);
 
 		lastFrameNumTicks = SDL_GetPerformanceCounter();
 		SDL_RenderPresent(renderer);
