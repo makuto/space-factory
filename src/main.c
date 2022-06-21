@@ -29,7 +29,7 @@ struct Vec2
 	float y;
 };
 
-struct iVec2
+struct IVec2
 {
 	int x;
 	int y;
@@ -817,7 +817,7 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
 //
 
 static GridCell* pickGridCellFromWorldSpace(Vec2 gridSpaceWorldPosition, GridSpace* searchGridSpace,
-                                            Vec2 pickWorldPosition,
+                                            IVec2 pickWorldPosition,
                                             unsigned char* selectionCellXOut,
                                             unsigned char* selectionCellYOut)
 {
@@ -921,7 +921,7 @@ static void renderNumber(SDL_Renderer* renderer, TileSheet* tileSheet, int x, in
 }
 
 static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWidth,
-                     int windowHeight, Vec2 cameraPosition, Vec2 gridSpaceWorldPosition,
+                     int windowHeight, IVec2 cameraPosition, Vec2 gridSpaceWorldPosition,
                      GridSpace* editGridSpace)
 {
 	int mouseX = 0;
@@ -1030,7 +1030,7 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 		}
 	}
 
-	Vec2 pickWorldPosition = {mouseX + cameraPosition.x, mouseY + cameraPosition.y};
+	IVec2 pickWorldPosition = {mouseX + cameraPosition.x, mouseY + cameraPosition.y};
 	unsigned char selectedCellX = 0;
 	unsigned char selectedCellY = 0;
 	GridCell* selectedCell = pickGridCellFromWorldSpace(
@@ -1236,7 +1236,7 @@ bool CheckGoalSatisfied(Vec2* playerPos, GridSpace* playerShip, Goal* goal)
 	       pointInRect(&playerBL, goal) || pointInRect(&playerBR, goal);
 }
 
-iVec2 toMiniMapCoordinates(float worldCoordX, float worldCoordY)
+IVec2 toMiniMapCoordinates(float worldCoordX, float worldCoordY)
 {
 	float nWorldCoordX = worldCoordX / c_spaceSize;
 	float nWorldCoordY = worldCoordY / c_spaceSize;
@@ -1245,8 +1245,8 @@ iVec2 toMiniMapCoordinates(float worldCoordX, float worldCoordY)
 
 SDL_Rect scaleRectToMinimap(float x, float y, float w, float h)
 {
-	iVec2 miniMapXY = toMiniMapCoordinates(x, y);
-	iVec2 miniMapWH = toMiniMapCoordinates(w, h);
+	IVec2 miniMapXY = toMiniMapCoordinates(x, y);
+	IVec2 miniMapWH = toMiniMapCoordinates(w, h);
 
 	if (miniMapWH.x == 0)
 		miniMapWH.x = 1;
@@ -1297,7 +1297,7 @@ void renderMiniMap(SDL_Renderer* renderer, int windowWidth, int windowHeight, Ve
 		Object* currentObject = &objects[i];
 		if (!currentObject->type)
 			continue;
-		iVec2 miniMapObjPos =
+		IVec2 miniMapObjPos =
 		    toMiniMapCoordinates(currentObject->body.position.x, currentObject->body.position.y);
 		miniMapObjPos.x += miniMapX;
 		miniMapObjPos.y += miniMapY;
@@ -1798,7 +1798,7 @@ int main(int numArguments, char** arguments)
 				}
 			}
 
-			Vec2 cameraPosition = {(float)camera.x, (float)camera.y};
+			IVec2 cameraPosition = {(int)camera.x, (int)camera.y};
 			doEditUI(renderer, &tileSheet, windowWidth, windowHeight, cameraPosition,
 			         playerPhys.position, &playerShipData);
 		}
