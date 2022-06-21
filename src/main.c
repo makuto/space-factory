@@ -45,6 +45,9 @@ const int c_spawnBuffer = 100;
 // goal
 const int c_goalSize = 40;
 
+const float c_timeToShowFailedOverlay = 0.25f;
+const float c_timeToShowDamagedText = 1.f;
+
 // minimap
 const int c_miniMapSize = 400;
 //
@@ -1192,15 +1195,9 @@ void renderMiniMap(SDL_Renderer* renderer, int windowWidth, int windowHeight, Ve
 	SDL_Rect miniPlayer =
 	    scaleRectToMinimap(playerPos->x, playerPos->y, playerShip->width * c_tileSize,
 	                       playerShip->height * c_tileSize);
-	SDL_Rect miniGoal = scaleRectToMinimap(goal->x, goal->y, goal->w, goal->h);
 
 	miniPlayer.x += miniMapX;
 	miniPlayer.y += miniMapY;
-
-	miniGoal.x += miniMapX;
-	miniGoal.y += miniMapY;
-	miniGoal.w = 4;
-	miniGoal.h = 4;
 
 	SDL_Rect miniMapBounds = {miniMapX, miniMapY, c_miniMapSize, c_miniMapSize};
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -1211,8 +1208,16 @@ void renderMiniMap(SDL_Renderer* renderer, int windowWidth, int windowHeight, Ve
 	SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
 	SDL_RenderFillRect(renderer, &miniPlayer);
 
-	SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
-	SDL_RenderFillRect(renderer, &miniGoal);
+	if (goal)
+	{
+		SDL_Rect miniGoal = scaleRectToMinimap(goal->x, goal->y, goal->w, goal->h);
+		miniGoal.x += miniMapX;
+		miniGoal.y += miniMapY;
+		miniGoal.w = 4;
+		miniGoal.h = 4;
+		SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+		SDL_RenderFillRect(renderer, &miniGoal);
+	}
 
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
@@ -1374,7 +1379,7 @@ int main(int numArguments, char** arguments)
 	{
 		const char* prompt;
 		int timeToCompleteSeconds;
-		Objective requirement;
+		Objective objective;
 	} GamePhase;
 	GamePhase gamePhases[] = {
 	    {"CONSTRUCT YOUR SHIP", 10, Objective_None},
@@ -1508,14 +1513,16 @@ int main(int numArguments, char** arguments)
 
 		renderObjects(renderer, &tileSheet, &camera);
 
-		renderGoal(renderer, &camera, &goal);
+		renderMiniMap(
+		    renderer, windowWidth, windowHeight, &playerPhys.position, playerShip,
+		    gamePhases[currentGamePhase].objective == Objective_ReachGoalPoint ? &goal : NULL);
 
-		renderMiniMap(renderer, windowWidth, windowHeight, &playerPhys.position, playerShip, &goal);
-
-		if (CheckGoalSatisfied(&playerPhys.position, playerShip, &goal))
+		bool startNewPhase = false;
+		if (gamePhases[currentGamePhase].objective == Objective_ReachGoalPoint)
 		{
-			goal.x = rand() % (c_spaceSize - c_spawnBuffer);
-			goal.y = rand() % (c_spaceSize - c_spawnBuffer);
+			renderGoal(renderer, &camera, &goal);
+			if (CheckGoalSatisfied(&playerPhys.position, playerShip, &goal))
+				startNewPhase = true;
 		}
 
 		// HUD
@@ -1535,12 +1542,64 @@ int main(int numArguments, char** arguments)
 				int secondsInCurrentPhase = currentSeconds - startPhaseSeconds;
 				GamePhase* phase = &gamePhases[currentGamePhase];
 				renderText(renderer, &tileSheet, 100, 120, phase->prompt);
-				renderNumber(renderer, &tileSheet, 100, 140,
-				             phase->timeToCompleteSeconds - secondsInCurrentPhase);
+				int phaseTimeLeft = phase->timeToCompleteSeconds - secondsInCurrentPhase;
+				if (phaseTimeLeft)
+					renderNumber(renderer, &tileSheet, 100, 140, phaseTimeLeft);
+
+				bool failedPhase = false;
 				if (secondsInCurrentPhase >= phase->timeToCompleteSeconds)
+				{
+					switch (gamePhases[currentGamePhase].objective)
+					{
+						case Objective_None:
+							startNewPhase = true;
+							break;
+						case Objective_ReachGoalPoint:
+							failedPhase = true;
+							break;
+					}
+				}
+
+				static float timeSinceFailedPhase = 0.f;
+				static float timeSinceFailedPhaseDamage = 0.f;
+				if (failedPhase)
+				{
+					timeSinceFailedPhase = c_timeToShowFailedOverlay;
+					timeSinceFailedPhaseDamage = c_timeToShowDamagedText;
+					startNewPhase = true;
+				}
+
+				if (timeSinceFailedPhase > 0.f)
+				{
+					timeSinceFailedPhase -= 1.f * deltaTime;
+					if (timeSinceFailedPhase < 0.f)
+						timeSinceFailedPhase = 0.f;
+					SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+					SDL_SetRenderDrawColor(renderer, 255, 255, 255,
+					                       (255 * timeSinceFailedPhase) / c_timeToShowFailedOverlay);
+					SDL_Rect fullScreenRect = {0, 0, windowWidth, windowHeight};
+					SDL_RenderFillRect(renderer, &fullScreenRect);
+					SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+				}
+
+				if (timeSinceFailedPhaseDamage > 0.f)
+				{
+					timeSinceFailedPhaseDamage -= 1.f * deltaTime;
+					if (timeSinceFailedPhaseDamage < 0.f)
+						timeSinceFailedPhaseDamage = 0.f;
+
+					renderText(renderer, &tileSheet, 100, 300, "DAMAGE DAMAGE DAMAGE");
+				}
+
+				if (startNewPhase)
 				{
 					startPhaseSeconds = currentSeconds;
 					++currentGamePhase;
+					if (gamePhases[currentGamePhase].objective == Objective_ReachGoalPoint)
+					{
+						goal.x = rand() % (c_spaceSize - c_spawnBuffer);
+						goal.y = rand() % (c_spaceSize - c_spawnBuffer);
+					}
 				}
 			}
 
