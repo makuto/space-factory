@@ -1306,7 +1306,8 @@ void renderMiniMap(SDL_Renderer* renderer, int windowWidth, int windowHeight, Ve
 bool doMainMenu(SDL_Window* window, SDL_Renderer* renderer, TileSheet* tileSheet)
 {
 	bool spaceDown = false;
-	char spacePressed = 0;
+	bool leftMouseButtonDown = false;
+	char state = 0;
 	while (1)
 	{
 		SDL_Event event;
@@ -1325,16 +1326,28 @@ bool doMainMenu(SDL_Window* window, SDL_Renderer* renderer, TileSheet* tileSheet
 		if (currentKeyStates[SDL_SCANCODE_SPACE])
 		{
 			if (!spaceDown)
-				++spacePressed;
+				++state;
 			spaceDown = true;
 		}
 		else
 			spaceDown = false;
 
+		int mouseX = 0;
+		int mouseY = 0;
+		Uint32 mouseButtonState = SDL_GetMouseState(&mouseX, &mouseY);
+		if (mouseButtonState & SDL_BUTTON_LMASK)
+		{
+			if (!leftMouseButtonDown)
+				++state;
+			leftMouseButtonDown = true;
+		}
+		else
+			leftMouseButtonDown = false;
+
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		SDL_RenderClear(renderer);
 
-		switch (spacePressed)
+		switch (state)
 		{
 			case 0:
 				renderMainMenu(renderer, tileSheet);
@@ -1461,9 +1474,9 @@ int main(int numArguments, char** arguments)
 		                       "#######d##########"
 		                       "#......A.........#"
 		                       "l<<<<<<f<<<<<<<<<R"
-		                       "l<<<<<<<<<.V<<<<<R"
-		                       "#........A.V.....#"
-		                       "#........A<f>>>>>r"
+		                       "l<<<<<<<<<<f<<<<<R"
+		                       "#..........V.....#"
+		                       "#..........>>>>>>r"
 		                       "#######u##########");
 
 		renderGridSpaceText(playerShip);
