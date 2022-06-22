@@ -1714,9 +1714,12 @@ int main(int numArguments, char** arguments)
 		extrapolatedPlayerPosition.y =
 		    playerPhys.position.y + (accumulatedTime * playerPhys.velocity.y);
 
-
-		if (numDamagesSustained <= c_numSustainableDamagesBeforeGameOver)
+		// Let the ship drift away on success or failure
+		if (numDamagesSustained <= c_numSustainableDamagesBeforeGameOver &&
+		    currentGamePhase < ARRAY_SIZE(gamePhases))
+		{
 			snapCameraToGrid(&camera, &extrapolatedPlayerPosition, playerShip, deltaTime);
+		}
 
 		renderStarField(renderer, &camera, windowWidth, windowHeight);
 
