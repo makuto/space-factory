@@ -74,7 +74,8 @@ const float c_defaultStartFuel = 2.f;
 const float c_fuelConsumptionRate = 1.f;
 
 // Physics
-const float c_playerDrag = 0.f;
+float playerDrag = 0.f;
+const float c_onFailurePlayerDrag = 0.1f;
 const float c_objectDrag = 0.f;
 const float c_deadLimit = 0.02f;  // the minimum velocity below which we are stationary
 
@@ -1691,7 +1692,11 @@ int main(int numArguments, char** arguments)
 				playerAtMaxVelocity = true;
 			}
 
-			UpdatePhysics(&playerPhys, c_playerDrag, c_simulateUpdateRate);
+			UpdatePhysics(&playerPhys,
+			              numDamagesSustained <= c_numSustainableDamagesBeforeGameOver ?
+			                  playerDrag :
+			                  c_onFailurePlayerDrag,
+			              c_simulateUpdateRate);
 			updateObjects(&playerPhys, &playerShipData, c_simulateUpdateRate);
 
 			doFactory(playerShip, c_simulateUpdateRate);
@@ -1709,7 +1714,9 @@ int main(int numArguments, char** arguments)
 		extrapolatedPlayerPosition.y =
 		    playerPhys.position.y + (accumulatedTime * playerPhys.velocity.y);
 
-		snapCameraToGrid(&camera, &extrapolatedPlayerPosition, playerShip, deltaTime);
+
+		if (numDamagesSustained <= c_numSustainableDamagesBeforeGameOver)
+			snapCameraToGrid(&camera, &extrapolatedPlayerPosition, playerShip, deltaTime);
 
 		renderStarField(renderer, &camera, windowWidth, windowHeight);
 
