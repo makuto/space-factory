@@ -42,6 +42,8 @@ struct IVec2
 /* const int c_arbitraryDelayTimeMilliseconds = 10; */
 const char c_tileSize = 32;
 
+const float c_simulateUpdateRate = 1.f / 60.f;
+
 // space
 const int c_spaceSize = 10000;
 const int c_spawnBuffer = c_spaceSize / 10; // 10% margins
@@ -1439,6 +1441,9 @@ int main(int numArguments, char** arguments)
 		return 1;
 	}
 
+	/* SDL_SetWindowSize(window, 3840, 2160); */
+	/* SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN); */
+
 	// Set up bundled data
 	initializeCakelisp();
 
@@ -1588,7 +1593,6 @@ int main(int numArguments, char** arguments)
 
 	// Main loop
 	bool enableDebugUI = false;
-	const float c_simulateUpdateRate = 1.f / 60.f;
 	float accumulatedTime = 0.f;
 	Uint64 lastFrameNumTicks = SDL_GetPerformanceCounter();
 	const char* exitReason = NULL;
