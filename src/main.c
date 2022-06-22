@@ -1601,6 +1601,7 @@ int main(int numArguments, char** arguments)
 	{
 		Uint64 currentCounterTicks = SDL_GetPerformanceCounter();
 		Uint64 frameDiffTicks = (currentCounterTicks - lastFrameNumTicks);
+		lastFrameNumTicks = currentCounterTicks;
 		float deltaTime = (frameDiffTicks / ((float)performanceNumTicksPerSecond));
 		accumulatedTime += deltaTime;
 
@@ -1842,7 +1843,6 @@ int main(int numArguments, char** arguments)
 		if (enableDebugUI)
 			addRenderDiagnostics(renderer, deltaTime, numSimulationUpdatesThisFrame);
 
-		lastFrameNumTicks = SDL_GetPerformanceCounter();
 		SDL_RenderPresent(renderer);
 		SDL_UpdateWindowSurface(window);
 		/* SDL_Delay(c_arbitraryDelayTimeMilliseconds); */
