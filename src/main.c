@@ -61,7 +61,7 @@ const int c_miniMapSize = 400;
 //
 // Camera
 //
-typedef SDL_FRect Camera;
+typedef SDL_Rect Camera;
 const float c_cameraEaseFactor = 5.f;
 const bool c_enableCameraSmoothing = false;
 
@@ -425,7 +425,8 @@ typedef struct Object
 
 Object objects[1024] = {0};
 
-void renderObjects(SDL_Renderer* renderer, TileSheet* tileSheet, Camera* camera)
+void renderObjects(SDL_Renderer* renderer, TileSheet* tileSheet, Camera* camera,
+                   Vec2 extrapolatedPlayerPosition, float extrapolateTime)
 {
 	for (int i = 0; i < ARRAY_SIZE(objects); ++i)
 	{
@@ -440,10 +441,26 @@ void renderObjects(SDL_Renderer* renderer, TileSheet* tileSheet, Camera* camera)
 			if (currentObject->type != association->key)
 				continue;
 
+			Vec2 extrapolatedObjectPosition = currentObject->body.position;
+			if (!currentObject->inFactory)
+			{
+				extrapolatedObjectPosition.x = currentObject->body.position.x +
+				                               (currentObject->body.velocity.x * extrapolateTime);
+				extrapolatedObjectPosition.y = currentObject->body.position.y +
+				                               (currentObject->body.velocity.y * extrapolateTime);
+			}
+			else
+			{
+				extrapolatedObjectPosition.x =
+				    (currentObject->tileX * c_tileSize) + extrapolatedPlayerPosition.x;
+				extrapolatedObjectPosition.y =
+				    (currentObject->tileY * c_tileSize) + extrapolatedPlayerPosition.y;
+			}
+
 			int textureX = association->column * c_tileSize;
 			int textureY = association->row * c_tileSize;
-			int screenX = currentObject->body.position.x - camera->x;
-			int screenY = currentObject->body.position.y - camera->y;
+			int screenX = extrapolatedObjectPosition.x - camera->x;
+			int screenY = extrapolatedObjectPosition.y - camera->y;
 			SDL_Rect sourceRectangle = {textureX, textureY, c_tileSize, c_tileSize};
 			SDL_Rect destinationRectangle = {screenX, screenY, c_tileSize, c_tileSize};
 			SDL_RenderCopyEx(renderer, tileSheet->texture, &sourceRectangle, &destinationRectangle,
@@ -663,40 +680,24 @@ void snapCameraToGrid(Camera* camera, Vec2* position, GridSpace* grid, float del
 {
 	// center camera over its position
 	// compute grid center
-	float x = position->x + (grid->width * c_tileSize) / 2;
-	float y = position->y + (grid->height * c_tileSize) / 2;
+	int x = (int)position->x + ((grid->width * c_tileSize) / 2);
+	int y = (int)position->y + ((grid->height * c_tileSize) / 2);
 
-	if ((camera->x - x - camera->w / 2) > 10 || (camera->y - y - camera->h / 2) > 10)
-	{
-		camera->x = (x - camera->w / 2);
-		camera->y = (y - camera->h / 2);
-	}
+	/* if ((camera->x - x - camera->w / 2) > 10 || (camera->y - y - camera->h / 2) > 10) */
+	/* { */
+	/* 	camera->x = (x - camera->w / 2); */
+	/* 	camera->y = (y - camera->h / 2); */
+	/* } */
 
-	float cameraOffsetX = (camera->w / 2.f);
-	float cameraOffsetY = (camera->h / 2.f);
-	float goalX = x;
-	float goalY = y;
+	int cameraOffsetX = (camera->w / 2);
+	int cameraOffsetY = (camera->h / 2);
+	int goalX = x;
+	int goalY = y;
 	camera->x += cameraOffsetX;
 	camera->y += cameraOffsetY;
 	// Ease in
-	float deltaX = goalX - camera->x;
-	float deltaY = goalY - camera->y;
-	/* static float deltaSmoothing[10][2] = {0}; */
-	/* static char deltaSmoothingWriteHead = 0; */
-	/* deltaSmoothing[deltaSmoothingWriteHead][0] = deltaX; */
-	/* deltaSmoothing[deltaSmoothingWriteHead][1] = deltaY; */
-	/* ++deltaSmoothingWriteHead; */
-	/* if (deltaSmoothingWriteHead >= ARRAY_SIZE(deltaSmoothing)) */
-	/* 	deltaSmoothingWriteHead = 0; */
-	/* float averageDelta[2] = {0}; */
-	/* for(int i = 0; i < ARRAY_SIZE(deltaSmoothing); ++i) */
-	/* { */
-	/* 	averageDelta[0] += deltaSmoothing[i][0]; */
-	/* 	averageDelta[1] += deltaSmoothing[i][1]; */
-	/* } */
-	/* averageDelta[0] /= ARRAY_SIZE(deltaSmoothing); */
-	/* averageDelta[1] /= ARRAY_SIZE(deltaSmoothing); */
-	// Smoothing
+	int deltaX = goalX - camera->x;
+	int deltaY = goalY - camera->y;
 	if (c_enableCameraSmoothing)
 	{
 		camera->x += deltaX * c_cameraEaseFactor * deltaTime;
@@ -1695,19 +1696,26 @@ int main(int numArguments, char** arguments)
 		/* fprintf(stderr, "%d\n", numSimulationUpdatesThisFrame); */
 
 		// Rendering
-		snapCameraToGrid(&camera, &playerPhys.position, playerShip, deltaTime);
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		SDL_RenderClear(renderer);
+
+		Vec2 extrapolatedPlayerPosition;
+		extrapolatedPlayerPosition.x =
+		    playerPhys.position.x + (accumulatedTime * playerPhys.velocity.x);
+		extrapolatedPlayerPosition.y =
+		    playerPhys.position.y + (accumulatedTime * playerPhys.velocity.y);
+
+		snapCameraToGrid(&camera, &extrapolatedPlayerPosition, playerShip, deltaTime);
 
 		renderStarField(renderer, &camera, windowWidth, windowHeight);
 
 		// Note: SDL doesn't render at a subpixel level, so we cast away the floating point of the
 		// camera to ensure our tiles will be at exact pixels. If we didn't do this, we would get
 		// seams due to floating point inaccuracies.
-		renderGridSpaceFromTileSheet(renderer, &tileSheet, playerShip, playerPhys.position.x,
-		                             playerPhys.position.y, (int)camera.x, (int)camera.y);
+		renderGridSpaceFromTileSheet(renderer, &tileSheet, playerShip, extrapolatedPlayerPosition.x,
+		                             extrapolatedPlayerPosition.y, (int)camera.x, (int)camera.y);
 
-		renderObjects(renderer, &tileSheet, &camera);
+		renderObjects(renderer, &tileSheet, &camera, extrapolatedPlayerPosition, accumulatedTime);
 
 		// HUD
 		if (numDamagesSustained > c_numSustainableDamagesBeforeGameOver)
@@ -1721,7 +1729,7 @@ int main(int numArguments, char** arguments)
 		else
 		{
 			renderMiniMap(
-			    renderer, windowWidth, windowHeight, &playerPhys.position, playerShip,
+			    renderer, windowWidth, windowHeight, &extrapolatedPlayerPosition, playerShip,
 			    gamePhases[currentGamePhase].objective == Objective_ReachGoalPoint ? &goal : NULL);
 
 			int playerVelocity = (int)(Magnitude(&playerPhys.velocity));
@@ -1738,7 +1746,7 @@ int main(int numArguments, char** arguments)
 				if (gamePhases[currentGamePhase].objective == Objective_ReachGoalPoint)
 				{
 					renderGoal(renderer, &camera, &goal);
-					if (CheckGoalSatisfied(&playerPhys.position, playerShip, &goal))
+					if (CheckGoalSatisfied(&extrapolatedPlayerPosition, playerShip, &goal))
 						startNewPhase = true;
 				}
 
@@ -1800,7 +1808,7 @@ int main(int numArguments, char** arguments)
 
 			IVec2 cameraPosition = {(int)camera.x, (int)camera.y};
 			doEditUI(renderer, &tileSheet, windowWidth, windowHeight, cameraPosition,
-			         playerPhys.position, &playerShipData);
+			         extrapolatedPlayerPosition, &playerShipData);
 		}
 
 		// Draw this even after the game is over
