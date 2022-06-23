@@ -1554,6 +1554,7 @@ int main(int numArguments, char** arguments)
 	typedef enum Objective
 	{
 		Objective_None,
+		Objective_ShipConstruct,
 		Objective_ReachGoalPoint,
 	} Objective;
 	typedef struct GamePhase
@@ -1563,15 +1564,15 @@ int main(int numArguments, char** arguments)
 		Objective objective;
 	} GamePhase;
 	GamePhase gamePhases[] = {
-	    {"CONSTRUCT YOUR SHIP", 60 + 30, Objective_None},
+	    {"CONSTRUCT YOUR SHIP", 60 + 30, Objective_ShipConstruct},
 	    {"ENEMY RADAR SIGNAL DETECTED", 10, Objective_None},
-	    {"TOUCH GREEN SAFETY ZONE", 30, Objective_ReachGoalPoint},
-	    {"TOUCH GREEN SAFETY ZONE", 25, Objective_ReachGoalPoint},
+	    {"TOUCH GREEN SAFETY ZONE ONE", 30, Objective_ReachGoalPoint},
+	    {"TOUCH GREEN SAFETY ZONE TWO", 25, Objective_ReachGoalPoint},
 	    {"ENEMY RADAR IN COOLDOWN", 5, Objective_None},
 	    {"REFIT YOUR SHIP", 30, Objective_None},
-	    {"TOUCH GREEN SAFETY ZONE", 15, Objective_ReachGoalPoint},
-	    {"TOUCH GREEN SAFETY ZONE", 10, Objective_ReachGoalPoint},
-	    {"TOUCH GREEN SAFETY ZONE", 5, Objective_ReachGoalPoint},
+	    {"TOUCH GREEN SAFETY ZONE THREE", 15, Objective_ReachGoalPoint},
+	    {"TOUCH GREEN SAFETY ZONE FOUR", 10, Objective_ReachGoalPoint},
+	    {"TOUCH GREEN SAFETY ZONE FIVE", 5, Objective_ReachGoalPoint},
 	};
 	int currentGamePhase = 0;
 	const Uint64 performanceNumTicksPerSecond = SDL_GetPerformanceFrequency();
@@ -1743,17 +1744,43 @@ int main(int numArguments, char** arguments)
 		}
 		else
 		{
-			renderMiniMap(
-			    renderer, windowWidth, windowHeight, &extrapolatedPlayerPosition, playerShip,
-			    gamePhases[currentGamePhase].objective == Objective_ReachGoalPoint ? &goal : NULL);
+			// Hide part of the hud during ship construction
+			if (gamePhases[currentGamePhase].objective != Objective_ShipConstruct)
+			{
+				renderMiniMap(
+				    renderer, windowWidth, windowHeight, &extrapolatedPlayerPosition, playerShip,
+				    gamePhases[currentGamePhase].objective == Objective_ReachGoalPoint ? &goal :
+				                                                                         NULL);
 
-			int playerVelocity = (int)(Magnitude(&playerPhys.velocity));
-			renderNumber(renderer, &tileSheet, 100, 100, playerVelocity);
-			renderText(renderer, &tileSheet, 100, 80, "VELOCITY");
-			// This is a bit weird, but informs the player that they will just waste fuel if they
-			// keep burning in that direction
-			if (playerVelocity >= (int)c_maxSpeed)
-				renderText(renderer, &tileSheet, 100, 60, "WARNING   MAX VELOCITY REACHED");
+				int playerVelocity = (int)(Magnitude(&playerPhys.velocity));
+				renderNumber(renderer, &tileSheet, 100, 100, playerVelocity);
+				renderText(renderer, &tileSheet, 100, 80, "VELOCITY");
+				// This is a bit weird, but informs the player that they will just waste fuel if
+				// they keep burning in that direction
+				if (playerVelocity >= (int)c_maxSpeed)
+					renderText(renderer, &tileSheet, 100, 60, "WARNING   MAX VELOCITY REACHED");
+
+				{
+					renderText(renderer, &tileSheet, 100, 300 - 40, "SHIP ARMOR");
+					char remainingHealth =
+					    c_numSustainableDamagesBeforeGameOver - numDamagesSustained;
+					if (remainingHealth)
+					{
+						GridSpace shipHealth = {0};
+						shipHealth.width = c_numSustainableDamagesBeforeGameOver;
+						shipHealth.height = 1;
+						// Max health
+						GridCell shipHealthCells[10] = {0};
+						for (int i = 0; i < remainingHealth; ++i)
+							shipHealthCells[i] = {'#'};
+						shipHealth.data = shipHealthCells;
+						renderGridSpaceFromTileSheet(renderer, &tileSheet, &shipHealth, 100,
+						                             300 - 20, 0, 0);
+					}
+					else
+						renderText(renderer, &tileSheet, 100, 300 - 20, "NONE");
+				}
+			}
 
 			if (currentGamePhase < ARRAY_SIZE(gamePhases))
 			{
@@ -1782,6 +1809,9 @@ int main(int numArguments, char** arguments)
 						case Objective_None:
 							startNewPhase = true;
 							break;
+						case Objective_ShipConstruct:
+							startNewPhase = true;
+							break;
 						case Objective_ReachGoalPoint:
 							failedPhase = true;
 							break;
@@ -1804,9 +1834,9 @@ int main(int numArguments, char** arguments)
 					if (timeSinceFailedPhaseDamage < 0.f)
 						timeSinceFailedPhaseDamage = 0.f;
 
-					renderText(renderer, &tileSheet, 100, 300, "DAMAGE DAMAGE DAMAGE");
+					renderText(renderer, &tileSheet, 100, 320, "DAMAGE DAMAGE DAMAGE");
 					if (numDamagesSustained == c_numSustainableDamagesBeforeGameOver)
-						renderText(renderer, &tileSheet, 100, 320, "WE WILL NOT SURVIVE ANOTHER HIT");
+						renderText(renderer, &tileSheet, 100, 340, "WE WILL NOT SURVIVE ANOTHER HIT");
 				}
 
 				if (startNewPhase)
