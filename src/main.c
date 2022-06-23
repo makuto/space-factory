@@ -120,7 +120,7 @@ typedef struct GridSpace
 	GridCell* data;
 } GridSpace;
 
-#define GridCellAt(gridSpace, x, y) (gridSpace->data[(y * gridSpace->width) + x])
+#define GridCellAt(gridSpace, x, y) ((gridSpace)->data[((y) * (gridSpace)->width) + (x)])
 
 // Let's try to keep it static for now
 /* static GridSpace* createGridSpace(unsigned char width, unsigned char height) */
@@ -1369,6 +1369,59 @@ void renderMiniMap(SDL_Renderer* renderer, int windowWidth, int windowHeight, Ve
 	}
 }
 
+static void renderFactoryGuide(SDL_Renderer* renderer, TileSheet* tileSheet)
+{
+	// Show a guide for ship construction
+	GridSpace tutorialGrid = {0};
+	tutorialGrid.width = 9;
+	tutorialGrid.height = 3;
+	// Max health
+	GridCell tutorialGridCells[9 * 3] = {0};
+	tutorialGrid.data = tutorialGridCells;
+
+	int currentY = 650;
+	const int addMargin = 20;
+	renderText(renderer, tileSheet, 100, currentY, "USE THE MOUSE TO EDIT SHIP");
+	currentY += 40;
+	renderText(renderer, tileSheet, 100, currentY, "INTAKES MOVE ASTEROIDS THEY TOUCH INSIDE\n");
+	tutorialGridCells[0] = {'a'};
+	tutorialGridCells[1] = {'L'};
+	tutorialGridCells[2] = {'>'};
+	renderGridSpaceFromTileSheet(renderer, tileSheet, &tutorialGrid, 120, currentY + 20 + 7, 0, 0);
+	currentY += 20 + 32 + addMargin;
+	renderText(renderer, tileSheet, 100, currentY, "FURNACES REFINE ASTEROIDS INTO FUEL\n");
+	memset(tutorialGridCells, 0, sizeof(tutorialGridCells));
+	tutorialGridCells[0] = {'>'};
+	tutorialGridCells[1] = {'f'};
+	tutorialGridCells[2] = {'>'};
+
+	tutorialGridCells[4] = {'a'};
+	tutorialGridCells[5] = {'>'};
+	tutorialGridCells[6] = {'f'};
+	tutorialGridCells[7] = {'>'};
+	tutorialGridCells[8] = {'g'};
+	renderGridSpaceFromTileSheet(renderer, tileSheet, &tutorialGrid, 120, currentY + 20 + 7, 0, 0);
+	currentY += 20 + 32 + addMargin;
+	renderText(renderer, tileSheet, 100, currentY,
+	           "FURNACES OUTPUT TO RANDOM ADJACENT OUTGOING CONVEYORS\n");
+	memset(tutorialGridCells, 0, sizeof(tutorialGridCells));
+	GridCellAt(&tutorialGrid, 1, 1) = {'f'};
+	GridCellAt(&tutorialGrid, 0, 1) = {'>'};
+	GridCellAt(&tutorialGrid, 1, 0) = {'V'};
+	GridCellAt(&tutorialGrid, 1, 2) = {'V'};
+	GridCellAt(&tutorialGrid, 2, 1) = {'>'};
+	renderGridSpaceFromTileSheet(renderer, tileSheet, &tutorialGrid, 120, currentY + 20 + 7, 0, 0);
+	currentY += 20 + (32 * 3) + addMargin;
+	renderText(renderer, tileSheet, 100, currentY, "ENGINES ONLY ACCEPT REFINED FUEL\n");
+	memset(tutorialGridCells, 0, sizeof(tutorialGridCells));
+	tutorialGridCells[0] = {'L'};
+	tutorialGridCells[1] = {'>'};
+	tutorialGridCells[2] = {'f'};
+	tutorialGridCells[3] = {'>'};
+	tutorialGridCells[4] = {'r'};
+	renderGridSpaceFromTileSheet(renderer, tileSheet, &tutorialGrid, 120, currentY + 20 + 7, 0, 0);
+}
+
 //
 //
 // Main
@@ -1535,6 +1588,7 @@ GameplayResult doGameplay(SDL_Window* window, SDL_Renderer* renderer, TileSheet 
 	typedef enum Objective
 	{
 		Objective_None,
+		// This does some weird stuff like hide the HUD, so use with caution
 		Objective_ShipConstruct,
 		Objective_ReachGoalPoint,
 	} Objective;
@@ -1779,6 +1833,10 @@ GameplayResult doGameplay(SDL_Window* window, SDL_Renderer* renderer, TileSheet 
 					else
 						renderText(renderer, &tileSheet, 100, 300 - 20, "NONE");
 				}
+			}
+			else
+			{
+				renderFactoryGuide(renderer, &tileSheet);
 			}
 
 			if (currentGamePhase < ARRAY_SIZE(gamePhases))
