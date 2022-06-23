@@ -48,7 +48,7 @@ const float c_simulateUpdateRate = 1.f / 60.f;
 
 // space
 const int c_spaceSize = 10000;
-const int c_spawnBuffer = c_spaceSize / 10; // 10% margins
+const int c_spawnBuffer = c_spaceSize / 10;  // 10% margins
 
 // goal
 const int c_goalSize = c_tileSize * 5;
@@ -1144,7 +1144,7 @@ static void renderMainMenu(SDL_Renderer* renderer, TileSheet* tileSheet)
 	// No sci-fi game is complete without some cheese
 	const char* text =
 	    "SPACE FACTORY\n\n\n"
-		"PRESS SPACE";
+	    "PRESS SPACE";
 	renderText(renderer, tileSheet, 200, 200, text);
 }
 
@@ -1160,7 +1160,7 @@ static void doTutorial(SDL_Renderer* renderer, TileSheet* tileSheet)
 	    "EVERY SECOND COUNTS\n"
 	    "REACH THE TARGET LOCATIONS IN TIME TO AVOID DETECTION\n\n\n"
 	    "YOUR CREW DEPENDS ON YOU\n\n\n"
-		"PRESS THE SPACE KEY TO CONTINUE";
+	    "PRESS THE SPACE KEY TO CONTINUE";
 	renderText(renderer, tileSheet, 200, 200, tutorialText);
 }
 
@@ -1171,8 +1171,8 @@ static void doEndScreenFailure(SDL_Renderer* renderer, TileSheet* tileSheet)
 	    "YOU AND YOUR CREW DRIFT INTO EMPTY SPACE\n\n"
 	    "BUT YOU KNOW THIS IS ONLY THE BEGINNING\n"
 	    "\n\n\n\n"
-		"THANK YOU FOR PLAYING\n\n"
-		"PRESS SPACE TO PLAY AGAIN\n\n\n\n"
+	    "THANK YOU FOR PLAYING\n\n"
+	    "PRESS SPACE TO PLAY AGAIN\n\n\n\n"
 	    "CREATED BY\n"
 	    "MACOY MADSON\n"
 	    "WILL CHAMBERS\n\n"
@@ -1189,8 +1189,8 @@ static void doEndScreenSuccess(SDL_Renderer* renderer, TileSheet* tileSheet)
 	    "BUT YOU KNOW THIS IS ONLY THE BEGINNING\n"
 	    "\n\n\n\n"
 	    "THANK YOU FOR PLAYING\n\n"
-		"PRESS SPACE TO PLAY AGAIN\n\n\n\n"
-		"CREATED BY\n"
+	    "PRESS SPACE TO PLAY AGAIN\n\n\n\n"
+	    "CREATED BY\n"
 	    "MACOY MADSON\n"
 	    "WILL CHAMBERS\n\n"
 	    "COPYRIGHT TWENTY TWENTY TWO\n"
@@ -1425,7 +1425,8 @@ static void addRenderDiagnostics(SDL_Renderer* renderer, float deltaTime,
 	SDL_RenderDrawPointsF(renderer, s_simulationUpdateGraph, ARRAY_SIZE(s_simulationUpdateGraph));
 
 	SDL_SetRenderDrawColor(renderer, 240, 10, 10, 255);
-	const SDL_Point sixtyHertzLine[] = {{marginX, graphHeight}, {graphWidth + marginX, graphHeight}};
+	const SDL_Point sixtyHertzLine[] = {{marginX, graphHeight},
+	                                    {graphWidth + marginX, graphHeight}};
 	SDL_RenderDrawLines(renderer, sixtyHertzLine, ARRAY_SIZE(sixtyHertzLine));
 }
 
@@ -1780,7 +1781,8 @@ GameplayResult doGameplay(SDL_Window* window, SDL_Renderer* renderer, TileSheet 
 
 					renderText(renderer, &tileSheet, 100, 320, "DAMAGE DAMAGE DAMAGE");
 					if (numDamagesSustained == c_numSustainableDamagesBeforeGameOver)
-						renderText(renderer, &tileSheet, 100, 340, "WE WILL NOT SURVIVE ANOTHER HIT");
+						renderText(renderer, &tileSheet, 100, 340,
+						           "WE WILL NOT SURVIVE ANOTHER HIT");
 				}
 
 				if (startNewPhase)
