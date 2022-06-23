@@ -920,6 +920,8 @@ static void renderText(SDL_Renderer* renderer, TileSheet* tileSheet, int x, int 
 {
 	const int c_fontStartX = 0;
 	const int c_fontStartY = 99;
+	const int c_numberStartX = 56;
+	const int c_numberStartY = 114;
 	const int c_fontWidth = 7;
 	const int c_fontHeight = 10;
 	const int c_scaledFontWidth = c_fontWidth * 2;
@@ -937,16 +939,27 @@ static void renderText(SDL_Renderer* renderer, TileSheet* tileSheet, int x, int 
 			continue;
 		}
 		// Only uppercase
-		if (*read < 'A' || *read > 'Z')
+		bool isText = (*read >= 'A' && *read <= 'Z');
+		bool isNumber = (*read >= '0' && *read <= '9');
+		if (!isText && !isNumber)
 		{
 			currentX += c_scaledFontWidth;
 			continue;
 		}
 
-		char index = *read - 'A';
-		int textureX = c_fontStartX + ((index % c_charactersPerRow) * c_fontWidth);
-		int textureY =
-		    c_fontStartY + ((index / c_charactersPerRow) * (c_fontHeight + c_fontVerticalSpace));
+		char index = *read - (isText ? 'A' : '0');
+		int textureX = 0;
+		if (isText)
+			textureX = c_fontStartX + ((index % c_charactersPerRow) * c_fontWidth);
+		else
+			textureX = c_numberStartX + (index * c_fontWidth);
+		int textureY = (isText ? c_fontStartY : c_numberStartX) +
+		               ((index / c_charactersPerRow) * (c_fontHeight + c_fontVerticalSpace));
+		if (isText)
+			textureY = c_fontStartY +
+			           ((index / c_charactersPerRow) * (c_fontHeight + c_fontVerticalSpace));
+		else
+			textureY = c_numberStartY;
 		int screenX = currentX + x;
 		int screenY = currentY + y;
 		SDL_Rect sourceRectangle = {textureX, textureY, c_fontWidth, c_fontHeight};
@@ -1247,8 +1260,8 @@ static void doEndScreenSuccess(SDL_Renderer* renderer, TileSheet* tileSheet)
 	    "CREATED BY\n"
 	    "MACOY MADSON\n"
 	    "WILL CHAMBERS\n\n"
-	    "COPYRIGHT TWENTY TWENTY TWO\n"
-	    "AVAILABLE UNDER TERMS OF GNU GENERAL PUBLIC LICENSE VERSION THREE\n";
+	    "COPYRIGHT 2022\n"
+	    "AVAILABLE UNDER TERMS OF GNU GENERAL PUBLIC LICENSE VERSION 3\n";
 	renderText(renderer, tileSheet, 200, 200, endScreenSuccess);
 }
 
@@ -1601,13 +1614,13 @@ GameplayResult doGameplay(SDL_Window* window, SDL_Renderer* renderer, TileSheet 
 	GamePhase gamePhases[] = {
 	    {"CONSTRUCT YOUR SHIP", 60 + 30, Objective_ShipConstruct},
 	    {"ENEMY RADAR SIGNAL DETECTED", 10, Objective_None},
-	    {"TOUCH GREEN SAFETY ZONE ONE", 30, Objective_ReachGoalPoint},
-	    {"TOUCH GREEN SAFETY ZONE TWO", 25, Objective_ReachGoalPoint},
+	    {"TOUCH GREEN AREA 1", 30, Objective_ReachGoalPoint},
+	    {"TOUCH GREEN AREA 2", 25, Objective_ReachGoalPoint},
 	    {"ENEMY RADAR IN COOLDOWN", 5, Objective_None},
 	    {"REFIT YOUR SHIP", 30, Objective_None},
-	    {"TOUCH GREEN SAFETY ZONE THREE", 15, Objective_ReachGoalPoint},
-	    {"TOUCH GREEN SAFETY ZONE FOUR", 10, Objective_ReachGoalPoint},
-	    {"TOUCH GREEN SAFETY ZONE FIVE", 5, Objective_ReachGoalPoint},
+	    {"TOUCH GREEN AREA 3", 15, Objective_ReachGoalPoint},
+	    {"TOUCH GREEN AREA 4", 10, Objective_ReachGoalPoint},
+	    {"TOUCH GREEN AREA 5", 5, Objective_ReachGoalPoint},
 	};
 	int currentGamePhase = 0;
 	const Uint64 performanceNumTicksPerSecond = SDL_GetPerformanceFrequency();
