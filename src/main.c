@@ -1563,15 +1563,15 @@ int main(int numArguments, char** arguments)
 		Objective objective;
 	} GamePhase;
 	GamePhase gamePhases[] = {
-	    {"CONSTRUCT YOUR SHIP", 60, Objective_None},
-	    {"ENEMY RADAR SIGNAL DETECTED", 3, Objective_None},
-	    {"REACH RADAR DEADZONE ALPHA", 20, Objective_ReachGoalPoint},
-	    {"REACH RADAR DEADZONE BRAVO", 18, Objective_ReachGoalPoint},
-	    {"ENEMY RADAR IN COOLDOWN", 3, Objective_None},
+	    {"CONSTRUCT YOUR SHIP", 60 + 30, Objective_None},
+	    {"ENEMY RADAR SIGNAL DETECTED", 10, Objective_None},
+	    {"TOUCH GREEN SAFETY ZONE", 30, Objective_ReachGoalPoint},
+	    {"TOUCH GREEN SAFETY ZONE", 25, Objective_ReachGoalPoint},
+	    {"ENEMY RADAR IN COOLDOWN", 5, Objective_None},
 	    {"REFIT YOUR SHIP", 30, Objective_None},
-	    {"REACH RADAR DEADZONE CHARLIE", 15, Objective_ReachGoalPoint},
-	    {"REACH RADAR DEADZONE DELTA", 10, Objective_ReachGoalPoint},
-	    {"REACH RADAR DEADZONE ECHO", 5, Objective_ReachGoalPoint},
+	    {"TOUCH GREEN SAFETY ZONE", 15, Objective_ReachGoalPoint},
+	    {"TOUCH GREEN SAFETY ZONE", 10, Objective_ReachGoalPoint},
+	    {"TOUCH GREEN SAFETY ZONE", 5, Objective_ReachGoalPoint},
 	};
 	int currentGamePhase = 0;
 	const Uint64 performanceNumTicksPerSecond = SDL_GetPerformanceFrequency();
