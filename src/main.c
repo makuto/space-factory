@@ -39,6 +39,8 @@ struct IVec2
 // Constants
 //
 
+const bool enableDeveloperOptions = true;
+
 /* const int c_arbitraryDelayTimeMilliseconds = 10; */
 const char c_tileSize = 32;
 
@@ -1169,7 +1171,8 @@ static void doEndScreenFailure(SDL_Renderer* renderer, TileSheet* tileSheet)
 	    "YOU AND YOUR CREW DRIFT INTO EMPTY SPACE\n\n"
 	    "BUT YOU KNOW THIS IS ONLY THE BEGINNING\n"
 	    "\n\n\n\n"
-	    "THANK YOU FOR PLAYING\n\n"
+		"THANK YOU FOR PLAYING\n\n"
+		"PRESS SPACE TO PLAY AGAIN\n\n\n\n"
 	    "CREATED BY\n"
 	    "MACOY MADSON\n"
 	    "WILL CHAMBERS\n\n"
@@ -1186,7 +1189,8 @@ static void doEndScreenSuccess(SDL_Renderer* renderer, TileSheet* tileSheet)
 	    "BUT YOU KNOW THIS IS ONLY THE BEGINNING\n"
 	    "\n\n\n\n"
 	    "THANK YOU FOR PLAYING\n\n"
-	    "CREATED BY\n"
+		"PRESS SPACE TO PLAY AGAIN\n\n\n\n"
+		"CREATED BY\n"
 	    "MACOY MADSON\n"
 	    "WILL CHAMBERS\n\n"
 	    "COPYRIGHT TWENTY TWENTY TWO\n"
@@ -1316,6 +1320,14 @@ void renderMiniMap(SDL_Renderer* renderer, int windowWidth, int windowHeight, Ve
 // Main
 //
 
+static bool continuePressed()
+{
+	const Uint8* currentKeyStates = SDL_GetKeyboardState(NULL);
+	if (currentKeyStates[SDL_SCANCODE_SPACE])
+		return true;
+	return false;
+}
+
 // Returns whether the game should be played
 bool doMainMenu(SDL_Window* window, SDL_Renderer* renderer, TileSheet* tileSheet)
 {
@@ -1417,103 +1429,17 @@ static void addRenderDiagnostics(SDL_Renderer* renderer, float deltaTime,
 	SDL_RenderDrawLines(renderer, sixtyHertzLine, ARRAY_SIZE(sixtyHertzLine));
 }
 
-int main(int numArguments, char** arguments)
+typedef enum GameplayResult
 {
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
-	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
-	SDL_Window* window = NULL;
-	int windowWidth = 1920;
-	int windowHeight = 1080;
-	if (!(sdlInitializeFor2d((&window), "Space Factory", windowWidth, windowHeight)))
-	{
-		fprintf(stderr, "Failed to initialize SDL\n");
-		return 1;
-	}
+	GameplayResult_ExitGame,
+	GameplayResult_StartNewGame,
+} GameplayResult;
 
-	// Initialize the hardware-accelerated 2D renderer
-	// Note: I had to set the driver to -1 so that a compatible one is automatically chosen.
-	// Otherwise, I get a window that doesn't vsync
-	sdlList2dRenderDrivers();
-	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-	if (!renderer)
-	{
-		sdlPrintError();
-		return 1;
-	}
-
-	/* SDL_SetWindowSize(window, 3840, 2160); */
-	/* SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN); */
-
-	// Set up bundled data
-	initializeCakelisp();
-
-	// Load tile sheet into texture
-	SDL_Texture* tileSheetTexture = NULL;
-	{
-#define NO_DATA_BUNDLE
-#ifdef NO_DATA_BUNDLE
-		SDL_Surface* tileSheetSurface = SDL_LoadBMP("assets/TileSheet.bmp");
-#else
-		SDL_RWops* tileSheetRWOps =
-		    SDL_RWFromMem(startTilesheetBmp, endTilesheetBmp - startTilesheetBmp);
-		SDL_Surface* tileSheetSurface = SDL_LoadBMP_RW(tileSheetRWOps, /*freesrc=*/1);
-#endif
-		if (!tileSheetSurface)
-		{
-			fprintf(stderr, "Failed to load tile sheet\n");
-			return 1;
-		}
-		// Use pure black as our chroma key
-		SDL_SetColorKey(tileSheetSurface, SDL_TRUE, SDL_MapRGB(tileSheetSurface->format, 0, 0, 0));
-		tileSheetTexture = SDL_CreateTextureFromSurface(renderer, tileSheetSurface);
-		SDL_FreeSurface(tileSheetSurface);
-		if (!tileSheetTexture)
-		{
-			sdlPrintError();
-			return 1;
-		}
-	}
-	// TODO: Turn this into a direct lookup table
-	TileSheet tileSheet = {{
-	                           // Wall
-	                           {'#', 0, 0, TextureTransform_None},
-	                           // Floor
-	                           {'.', 0, 1, TextureTransform_None},
-	                           // Conveyor to left
-	                           {'<', 0, 2, TextureTransform_None},
-	                           // Conveyor to right
-	                           {'>', 0, 2, TextureTransform_FlipHorizontal},
-	                           // Conveyor to up
-	                           {'A', 0, 2, TextureTransform_Clockwise90},
-	                           // Conveyor to down
-	                           {'V', 0, 2, TextureTransform_CounterClockwise90},
-	                           // Furnace
-	                           {'f', 2, 1, TextureTransform_None},
-	                           // Intake from right
-	                           {'R', 2, 0, TextureTransform_None},
-	                           // Intake from left
-	                           {'L', 2, 0, TextureTransform_FlipHorizontal},
-	                           // Intake from top
-	                           {'U', 2, 0, TextureTransform_CounterClockwise90},
-	                           // Intake from bottom
-	                           {'D', 2, 0, TextureTransform_Clockwise90},
-	                           // Engine to left (unpowered)
-	                           {'l', 1, 1, TextureTransform_FlipHorizontal},
-	                           {'r', 1, 1, TextureTransform_None},
-	                           {'u', 1, 1, TextureTransform_Clockwise90},
-	                           {'d', 1, 1, TextureTransform_CounterClockwise90},
-
-	                           // Objects
-	                           // Unrefined fuel (asteroid)
-	                           {'a', 0, 3, TextureTransform_None},
-	                           // Refined fuel
-	                           {'g', 1, 0, TextureTransform_None},
-	                       },
-	                       tileSheetTexture};
-
-	if (!doMainMenu(window, renderer, &tileSheet))
-		return 0;
+GameplayResult doGameplay(SDL_Window* window, SDL_Renderer* renderer, TileSheet tileSheet)
+{
+	int windowWidth;
+	int windowHeight;
+	SDL_GetRendererOutputSize(renderer, &windowWidth, &windowHeight);
 
 	// Make some grids
 	GridSpace playerShipData = {0};
@@ -1595,6 +1521,7 @@ int main(int numArguments, char** arguments)
 
 	// Main loop
 	bool enableDebugUI = false;
+	bool isPhaseSkipPressed = false;
 	float accumulatedTime = 0.f;
 	Uint64 lastFrameNumTicks = SDL_GetPerformanceCounter();
 	const char* exitReason = NULL;
@@ -1623,8 +1550,21 @@ int main(int numArguments, char** arguments)
 			exitReason = "Escape pressed";
 		}
 
-		if (currentKeyStates[SDL_SCANCODE_F1])
-			enableDebugUI = true;
+		// Developer options
+		if (enableDeveloperOptions)
+		{
+			if (currentKeyStates[SDL_SCANCODE_F1])
+				enableDebugUI = true;
+			// Advance to next phase
+			if (currentKeyStates[SDL_SCANCODE_F2])
+			{
+				if (!isPhaseSkipPressed)
+					++currentGamePhase;
+				isPhaseSkipPressed = true;
+			}
+			else
+				isPhaseSkipPressed = false;
+		}
 
 		int numSimulationUpdatesThisFrame = 0;
 		/* accumulatedTime = c_simulateUpdateRate;// Fixed update */
@@ -1737,10 +1677,14 @@ int main(int numArguments, char** arguments)
 		if (numDamagesSustained > c_numSustainableDamagesBeforeGameOver)
 		{
 			doEndScreenFailure(renderer, &tileSheet);
+			if (continuePressed())
+				return GameplayResult_StartNewGame;
 		}
 		else if (currentGamePhase >= ARRAY_SIZE(gamePhases))
 		{
 			doEndScreenSuccess(renderer, &tileSheet);
+			if (continuePressed())
+				return GameplayResult_StartNewGame;
 		}
 		else
 		{
@@ -1882,8 +1826,122 @@ int main(int numArguments, char** arguments)
 	{
 		fprintf(stderr, "Exiting. Reason: %s\n", exitReason);
 	}
+	return GameplayResult_ExitGame;
+}
+
+int main(int numArguments, char** arguments)
+{
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
+	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
+	SDL_Window* window = NULL;
+	int windowWidth = 1920;
+	int windowHeight = 1080;
+	if (!(sdlInitializeFor2d((&window), "Space Factory", windowWidth, windowHeight)))
+	{
+		fprintf(stderr, "Failed to initialize SDL\n");
+		return 1;
+	}
+
+	// Initialize the hardware-accelerated 2D renderer
+	// Note: I had to set the driver to -1 so that a compatible one is automatically chosen.
+	// Otherwise, I get a window that doesn't vsync
+	sdlList2dRenderDrivers();
+	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+	if (!renderer)
+	{
+		sdlPrintError();
+		return 1;
+	}
+
+	// Exclusive fullscreen (for testing)
+	/* SDL_SetWindowSize(window, 3840, 2160); */
+	/* SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN); */
+
+	// Set up bundled data
+	initializeCakelisp();
+
+	// Load tile sheet into texture
+	SDL_Texture* tileSheetTexture = NULL;
+	{
+#define NO_DATA_BUNDLE
+#ifdef NO_DATA_BUNDLE
+		SDL_Surface* tileSheetSurface = SDL_LoadBMP("assets/TileSheet.bmp");
+#else
+		SDL_RWops* tileSheetRWOps =
+		    SDL_RWFromMem(startTilesheetBmp, endTilesheetBmp - startTilesheetBmp);
+		SDL_Surface* tileSheetSurface = SDL_LoadBMP_RW(tileSheetRWOps, /*freesrc=*/1);
+#endif
+		if (!tileSheetSurface)
+		{
+			fprintf(stderr, "Failed to load tile sheet\n");
+			return 1;
+		}
+		// Use pure black as our chroma key
+		SDL_SetColorKey(tileSheetSurface, SDL_TRUE, SDL_MapRGB(tileSheetSurface->format, 0, 0, 0));
+		tileSheetTexture = SDL_CreateTextureFromSurface(renderer, tileSheetSurface);
+		SDL_FreeSurface(tileSheetSurface);
+		if (!tileSheetTexture)
+		{
+			sdlPrintError();
+			return 1;
+		}
+	}
+	// TODO: Turn this into a direct lookup table
+	TileSheet tileSheet = {{
+	                           // Wall
+	                           {'#', 0, 0, TextureTransform_None},
+	                           // Floor
+	                           {'.', 0, 1, TextureTransform_None},
+	                           // Conveyor to left
+	                           {'<', 0, 2, TextureTransform_None},
+	                           // Conveyor to right
+	                           {'>', 0, 2, TextureTransform_FlipHorizontal},
+	                           // Conveyor to up
+	                           {'A', 0, 2, TextureTransform_Clockwise90},
+	                           // Conveyor to down
+	                           {'V', 0, 2, TextureTransform_CounterClockwise90},
+	                           // Furnace
+	                           {'f', 2, 1, TextureTransform_None},
+	                           // Intake from right
+	                           {'R', 2, 0, TextureTransform_None},
+	                           // Intake from left
+	                           {'L', 2, 0, TextureTransform_FlipHorizontal},
+	                           // Intake from top
+	                           {'U', 2, 0, TextureTransform_CounterClockwise90},
+	                           // Intake from bottom
+	                           {'D', 2, 0, TextureTransform_Clockwise90},
+	                           // Engine to left (unpowered)
+	                           {'l', 1, 1, TextureTransform_FlipHorizontal},
+	                           {'r', 1, 1, TextureTransform_None},
+	                           {'u', 1, 1, TextureTransform_Clockwise90},
+	                           {'d', 1, 1, TextureTransform_CounterClockwise90},
+
+	                           // Objects
+	                           // Unrefined fuel (asteroid)
+	                           {'a', 0, 3, TextureTransform_None},
+	                           // Refined fuel
+	                           {'g', 1, 0, TextureTransform_None},
+	                       },
+	                       tileSheetTexture};
+
+	if (!doMainMenu(window, renderer, &tileSheet))
+		return 0;
+
+	GameplayResult result = GameplayResult_StartNewGame;
+	while (result == GameplayResult_StartNewGame)
+	{
+		result = doGameplay(window, renderer, tileSheet);
+	}
+
 	SDL_DestroyRenderer(renderer);
 	sdlShutdown(window);
 
-	return 0;
+	switch (result)
+	{
+		case GameplayResult_ExitGame:
+			return 0;
+		default:
+			return 1;
+	}
 }
