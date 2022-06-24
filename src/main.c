@@ -1278,7 +1278,7 @@ static void doEndScreenFailure(SDL_Renderer* renderer, TileSheet* tileSheet)
 static void doEndScreenSuccess(SDL_Renderer* renderer, TileSheet* tileSheet)
 {
 	const char* endScreenSuccess =
-	    "YOU SUCCESSFULLY AVOIDED DETECTION\n\n"
+	    "YOU SUCCESSFULLY AVOIDED DESTRUCTION\n\n"
 	    "YOUR EXHAUSTED CREW CELEBRATES\n\n"
 	    "BUT YOU KNOW THIS IS ONLY THE BEGINNING\n"
 	    "\n\n\n\n"
