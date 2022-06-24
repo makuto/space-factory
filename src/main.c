@@ -276,7 +276,7 @@ static void renderGridSpaceFromTileSheet(SDL_Renderer* renderer, TileSheet* tile
 
 					SDL_Rect fuelMeterRect = {meterPosX, meterPosY, meterWidth + 2,
 					                          meterHeight + 2};
-					SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+					SDL_SetRenderDrawColor(renderer, 102, 138, 158, 255);
 					SDL_RenderDrawRect(renderer, &fuelMeterRect);
 					float fuelPercentage =
 					    (GridCellAt(gridSpace, cellX, cellY).engineCell.fuel) / c_maxFuel;
@@ -290,7 +290,7 @@ static void renderGridSpaceFromTileSheet(SDL_Renderer* renderer, TileSheet* tile
 					}
 
 					SDL_Rect fuelRect = {meterPosX + 1, meterPosY + 1, meterWidth, meterHeight};
-					SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+					SDL_SetRenderDrawColor(renderer, 209, 193, 163, 255);
 					SDL_RenderFillRect(renderer, &fuelRect);
 
 					SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
@@ -1349,10 +1349,10 @@ void renderMiniMap(SDL_Renderer* renderer, int windowWidth, int windowHeight, Ve
 	SDL_Rect miniMapBounds = {miniMapX, miniMapY, c_miniMapSize, c_miniMapSize};
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 	SDL_RenderFillRect(renderer, &miniMapBounds);
-	SDL_SetRenderDrawColor(renderer, 240, 240, 240, 255);
+	SDL_SetRenderDrawColor(renderer, 82, 74, 63, 255);
 	SDL_RenderDrawRect(renderer, &miniMapBounds);
 
-	SDL_SetRenderDrawColor(renderer, 211, 100, 84, 255);
+	SDL_SetRenderDrawColor(renderer, 184, 98, 76, 255);
 	SDL_RenderFillRect(renderer, &miniPlayer);
 
 	if (goal)
@@ -1377,7 +1377,7 @@ void renderMiniMap(SDL_Renderer* renderer, int windowWidth, int windowHeight, Ve
 		miniMapObjPos.x += miniMapX;
 		miniMapObjPos.y += miniMapY;
 		SDL_Rect miniObj = {miniMapObjPos.x, miniMapObjPos.y, 4, 4};
-		SDL_SetRenderDrawColor(renderer, 84, 103, 211, 255);
+		SDL_SetRenderDrawColor(renderer, 102, 138, 158, 255);
 		SDL_RenderFillRect(renderer, &miniObj);
 	}
 }
@@ -1386,10 +1386,10 @@ static void renderFactoryGuide(SDL_Renderer* renderer, TileSheet* tileSheet)
 {
 	// Show a guide for ship construction
 	GridSpace tutorialGrid = {0};
-	tutorialGrid.width = 9;
+	tutorialGrid.width = 5;
 	tutorialGrid.height = 3;
 	// Max health
-	GridCell tutorialGridCells[9 * 3] = {0};
+	GridCell tutorialGridCells[5 * 3] = {0};
 	tutorialGrid.data = tutorialGridCells;
 
 	int currentY = 650;
@@ -1404,15 +1404,15 @@ static void renderFactoryGuide(SDL_Renderer* renderer, TileSheet* tileSheet)
 	currentY += 20 + 32 + addMargin;
 	renderText(renderer, tileSheet, 100, currentY, "FURNACES REFINE ASTEROIDS INTO FUEL\n");
 	memset(tutorialGridCells, 0, sizeof(tutorialGridCells));
-	tutorialGridCells[0] = {'>'};
-	tutorialGridCells[1] = {'f'};
-	tutorialGridCells[2] = {'>'};
+	/* tutorialGridCells[0] = {'>'}; */
+	/* tutorialGridCells[1] = {'f'}; */
+	/* tutorialGridCells[2] = {'>'}; */
 
-	tutorialGridCells[4] = {'a'};
-	tutorialGridCells[5] = {'>'};
-	tutorialGridCells[6] = {'f'};
-	tutorialGridCells[7] = {'>'};
-	tutorialGridCells[8] = {'g'};
+	tutorialGridCells[0] = {'a'};
+	tutorialGridCells[1] = {'>'};
+	tutorialGridCells[2] = {'f'};
+	tutorialGridCells[3] = {'>'};
+	tutorialGridCells[4] = {'g'};
 	renderGridSpaceFromTileSheet(renderer, tileSheet, &tutorialGrid, 120, currentY + 20 + 7, 0, 0);
 	currentY += 20 + 32 + addMargin;
 	renderText(renderer, tileSheet, 100, currentY,
