@@ -1215,20 +1215,24 @@ static void renderMainMenu(SDL_Renderer* renderer, TileSheet* tileSheet)
 	renderText(renderer, tileSheet, 200, 200, text);
 }
 
-static void doTutorial(SDL_Renderer* renderer, TileSheet* tileSheet)
+static void doTutorial(SDL_Renderer* renderer, TileSheet* tileSheet, int page)
 {
 	// No sci-fi game is complete without some cheese
-	const char* tutorialText =
+	const char* tutorialText[] = {
 	    "FREEDOM, CURIOSITY, SHARED DESTINY:\n"
-	    "THE CONGLOMERATE IS NOT HAPPY WITH YOU SPREADING THESE IDEALS\n\n\n"
+	    "THE CONGLOMERATE IS NOT HAPPY WITH YOU SPREADING THESE IDEALS\n\n"
+		"THEIR SHIP IS TRACKING YOU\n\n\n"
+	    "PRESS THE SPACE KEY TO CONTINUE",
 	    "YOU MUST REFINE ASTEROIDS INTO FUEL\n"
 	    "FUEL YOUR ENGINES TO MANEUVER THE SHIP\n\n"
-	    "CUSTOMIZE YOUR FACTORY TO MAXIMIZE EFFICIENCY\n"
+	    "CUSTOMIZE YOUR FACTORY TO MAXIMIZE EFFICIENCY\n\n\n"
+	    "PRESS THE SPACE KEY TO CONTINUE",
 	    "EVERY SECOND COUNTS\n"
-	    "REACH THE TARGET LOCATIONS IN TIME TO AVOID DETECTION\n\n\n"
+	    "REACH THE TARGET LOCATIONS IN TIME TO AVOID DETECTION\n\n"
 	    "YOUR CREW DEPENDS ON YOU\n\n\n"
-	    "PRESS THE SPACE KEY TO CONTINUE";
-	renderText(renderer, tileSheet, 200, 200, tutorialText);
+	    "PRESS THE SPACE KEY TO CONTINUE",
+	};
+	renderText(renderer, tileSheet, 200, 200, tutorialText[page]);
 }
 
 static void doEndScreenFailure(SDL_Renderer* renderer, TileSheet* tileSheet)
@@ -1499,9 +1503,15 @@ bool doMainMenu(SDL_Window* window, SDL_Renderer* renderer, TileSheet* tileSheet
 				renderMainMenu(renderer, tileSheet);
 				break;
 			case 1:
-				doTutorial(renderer, tileSheet);
+				doTutorial(renderer, tileSheet, 0);
 				break;
 			case 2:
+				doTutorial(renderer, tileSheet, 1);
+				break;
+			case 3:
+				doTutorial(renderer, tileSheet, 2);
+				break;
+			case 4:
 				return true;
 				break;
 		}
