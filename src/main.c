@@ -51,6 +51,13 @@ const bool enableDeveloperOptions = true;
 /* const int c_arbitraryDelayTimeMilliseconds = 10; */
 const char c_tileSize = 32;
 
+const int c_fontWidth = 7;
+const int c_fontHeight = 10;
+const int c_scaledFontWidth = c_fontWidth * 2;
+const int c_scaledFontHeight = c_fontHeight * 2;
+
+const float c_typeOutTime = 0.75f;
+
 const float c_simulateUpdateRate = 1.f / 60.f;
 
 // space
@@ -922,10 +929,6 @@ static void renderText(SDL_Renderer* renderer, TileSheet* tileSheet, int x, int 
 	const int c_fontStartY = 99;
 	const int c_numberStartX = 56;
 	const int c_numberStartY = 114;
-	const int c_fontWidth = 7;
-	const int c_fontHeight = 10;
-	const int c_scaledFontWidth = c_fontWidth * 2;
-	const int c_scaledFontHeight = c_fontHeight * 2;
 	const int c_charactersPerRow = 18;
 	const int c_fontVerticalSpace = 5;
 	int currentX = 0;
@@ -979,8 +982,6 @@ static void renderNumber(SDL_Renderer* renderer, TileSheet* tileSheet, int x, in
 	const int c_fontStartY = 114;
 	const int c_fontWidth = 7;
 	const int c_fontHeight = 10;
-	const int c_scaledFontWidth = c_fontWidth * 1.5f;
-	const int c_scaledFontHeight = c_fontHeight * 1.5f;
 	for (const char* read = numberBuffer; *read; ++read)
 	{
 		int textureX = c_fontStartX + ((*read - '0') * c_fontWidth);
@@ -1624,13 +1625,13 @@ GameplayResult doGameplay(SDL_Window* window, SDL_Renderer* renderer, TileSheet 
 	GamePhase gamePhases[] = {
 	    {"CONSTRUCT YOUR SHIP", 60 + 30, Objective_ShipConstruct},
 	    {"ENEMY RADAR SIGNAL DETECTED", 10, Objective_None},
-	    {"TOUCH GREEN AREA 1", 30, Objective_ReachGoalPoint},
-	    {"TOUCH GREEN AREA 2", 25, Objective_ReachGoalPoint},
+	    {"REACH GREEN AREA 1", 30, Objective_ReachGoalPoint},
+	    {"REACH GREEN AREA 2", 25, Objective_ReachGoalPoint},
 	    {"ENEMY RADAR IN COOLDOWN", 5, Objective_None},
 	    {"REFIT YOUR SHIP", 30, Objective_None},
-	    {"TOUCH GREEN AREA 3", 15, Objective_ReachGoalPoint},
-	    {"TOUCH GREEN AREA 4", 10, Objective_ReachGoalPoint},
-	    {"TOUCH GREEN AREA 5", 5, Objective_ReachGoalPoint},
+	    {"REACH GREEN AREA 3", 15, Objective_ReachGoalPoint},
+	    {"REACH GREEN AREA 4", 10, Objective_ReachGoalPoint},
+	    {"REACH GREEN AREA 5", 5, Objective_ReachGoalPoint},
 	};
 	int currentGamePhase = 0;
 	const Uint64 performanceNumTicksPerSecond = SDL_GetPerformanceFrequency();
@@ -1655,6 +1656,7 @@ GameplayResult doGameplay(SDL_Window* window, SDL_Renderer* renderer, TileSheet 
 	bool enableDebugUI = false;
 	bool isPhaseSkipPressed = false;
 	float accumulatedTime = 0.f;
+	float startPromptTimeToTypeOut = 0.f;
 	Uint64 lastFrameNumTicks = SDL_GetPerformanceCounter();
 	const char* exitReason = NULL;
 	while (!(exitReason))
@@ -1683,6 +1685,7 @@ GameplayResult doGameplay(SDL_Window* window, SDL_Renderer* renderer, TileSheet 
 		}
 
 		// Developer options
+		bool forceStartNewPhase = false;
 		if (enableDeveloperOptions)
 		{
 			if (currentKeyStates[SDL_SCANCODE_F1])
@@ -1691,7 +1694,7 @@ GameplayResult doGameplay(SDL_Window* window, SDL_Renderer* renderer, TileSheet 
 			if (currentKeyStates[SDL_SCANCODE_F2])
 			{
 				if (!isPhaseSkipPressed)
-					++currentGamePhase;
+					forceStartNewPhase = true;
 				isPhaseSkipPressed = true;
 			}
 			else
@@ -1876,10 +1879,31 @@ GameplayResult doGameplay(SDL_Window* window, SDL_Renderer* renderer, TileSheet 
 				int currentSeconds = currentGamePhaseTicks / performanceNumTicksPerSecond;
 				int secondsInCurrentPhase = currentSeconds - startPhaseSeconds;
 				GamePhase* phase = &gamePhases[currentGamePhase];
-				renderText(renderer, &tileSheet, 100, 120, phase->prompt);
+				static const char* currentPrompt = NULL;
+				char typeOutPrompt[256] = {0};
+				if (currentPrompt != phase->prompt)
+				{
+					startPromptTimeToTypeOut = c_typeOutTime;
+					currentPrompt = phase->prompt;
+				}
+				startPromptTimeToTypeOut -= deltaTime;
+				if (startPromptTimeToTypeOut < 0.f)
+					startPromptTimeToTypeOut = 0.f;
+				char promptLength = strlen(currentPrompt);
+				char typePromptLength = (promptLength * (c_typeOutTime - startPromptTimeToTypeOut)) / c_typeOutTime;
+				memset(typeOutPrompt, 0, sizeof(typeOutPrompt));
+				for (int i = 0; i < typePromptLength; ++i)
+				{
+					typeOutPrompt[i] = currentPrompt[i];
+				}
+				renderText(renderer, &tileSheet,
+				           (windowWidth / 2) - ((strlen(phase->prompt) * c_scaledFontWidth) / 2),
+				           120, typeOutPrompt);
 				int phaseTimeLeft = phase->timeToCompleteSeconds - secondsInCurrentPhase;
 				if (phaseTimeLeft)
-					renderNumber(renderer, &tileSheet, 100, 140, phaseTimeLeft);
+					renderNumber(renderer, &tileSheet,
+					             (windowWidth / 2) - c_fontWidth,
+					             145, phaseTimeLeft);
 
 				bool failedPhase = false;
 				if (secondsInCurrentPhase >= phase->timeToCompleteSeconds)
@@ -1920,7 +1944,7 @@ GameplayResult doGameplay(SDL_Window* window, SDL_Renderer* renderer, TileSheet 
 						           "WE WILL NOT SURVIVE ANOTHER HIT");
 				}
 
-				if (startNewPhase)
+				if (startNewPhase || forceStartNewPhase)
 				{
 					startPhaseSeconds = currentSeconds;
 					++currentGamePhase;
