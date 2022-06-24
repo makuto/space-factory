@@ -92,7 +92,7 @@ const float c_fuelConsumptionRate = 1.f;
 // Physics
 float playerDrag = 0.f;
 const float c_onFailurePlayerDrag = 0.1f;
-const float c_objectDrag = 0.f;
+const float c_objectDrag = 0.1f;
 const float c_deadLimit = 0.02f;  // the minimum velocity below which we are stationary
 
 // Factory
@@ -375,10 +375,10 @@ struct RigidBody
 
 bool objHittingGrid(RigidBody* gridPos, GridSpace* gridSheet, RigidBody* objPos){
 
-    SDL_FRect playerBoundingBox = { gridPos->position.x - c_tileSize, 
-                                    gridPos->position.y - c_tileSize, 
-                                    (float)((gridSheet->width+1)*c_tileSize),
-                                    (float)((gridSheet->height+1)*c_tileSize),
+    SDL_FRect playerBoundingBox = { gridPos->position.x , 
+                                    gridPos->position.y , 
+                                    (float)((gridSheet->width)*c_tileSize),
+                                    (float)((gridSheet->height)*c_tileSize),
                                     };
 
     return(pointInFRect( &objPos->position, &playerBoundingBox));
@@ -518,10 +518,14 @@ void renderObjects(SDL_Renderer* renderer, TileSheet* tileSheet, Camera* camera,
 			Vec2 extrapolatedObjectPosition = currentObject->body.position;
 			if (!currentObject->inFactory)
 			{
-				extrapolatedObjectPosition.x = currentObject->body.position.x +
-				                               (currentObject->body.velocity.x * extrapolateTime);
+				extrapolatedObjectPosition.x = currentObject->body.position.x + 
+				                               (currentObject->body.velocity.x * extrapolateTime)
+                                               -c_tileSize/2;
+                                               
 				extrapolatedObjectPosition.y = currentObject->body.position.y +
-				                               (currentObject->body.velocity.y * extrapolateTime);
+				                               (currentObject->body.velocity.y * extrapolateTime)
+                                               -c_tileSize/2
+                                               ;
 			}
 			else
 			{
@@ -842,7 +846,7 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
               if(shipTileX==0)//hit left side
               {
                   if(*objX > playerPhys->position.x)
-                    *objX = playerPhys->position.x-c_tileSize; 
+                    *objX = playerPhys->position.x; 
 
                   if(plyVX <= 0){
                       *objVX = plyVX;
@@ -860,7 +864,7 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
               else if(shipTileY==0){//hit top
                   if(*objY > playerPhys->position.y)
                     *objY = playerPhys->position.y;
-                  *objY = playerPhys->position.y - c_tileSize;
+                  *objY = playerPhys->position.y;
                   if(plyVY <= 0){
                       *objVY=plyVY;
                   }
