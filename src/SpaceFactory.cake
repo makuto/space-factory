@@ -8,7 +8,8 @@
 (comptime-cond
  ('No-Data-Bundle (ignore))
  (true
-  (bundle-file start-tilesheet-bmp end-tilesheet-bmp (unsigned char) "assets/TileSheet.bmp")))
+  (bundle-file start-tilesheet-bmp end-tilesheet-bmp (unsigned char) "assets/TileSheet.bmp")
+  (bundle-file start-logo-bmp end-logo-bmp (unsigned char) "assets/SpaceFactoryLogo.bmp")))
 
 (add-c-search-directory-global "src")
 

@@ -1207,13 +1207,35 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 	}
 }
 
-static void renderMainMenu(SDL_Renderer* renderer, TileSheet* tileSheet)
+static void renderMainMenu(SDL_Renderer* renderer, TileSheet* tileSheet, SDL_Texture* logoTexture)
 {
-	// No sci-fi game is complete without some cheese
-	const char* text =
-	    "SPACE FACTORY\n\n\n"
-	    "PRESS SPACE";
-	renderText(renderer, tileSheet, 200, 200, text);
+	int windowWidth;
+	int windowHeight;
+	SDL_GetRendererOutputSize(renderer, &windowWidth, &windowHeight);
+
+	const int c_logoWidth = 99;
+	const int c_logoHeight = 57;
+	SDL_Rect sourceRectangle = {0, 0, c_logoWidth, c_logoHeight};
+	SDL_Rect destinationRectangle = {(windowWidth / 2) - ((c_logoWidth * 12) / 2), 100, c_logoWidth * 12,
+	                                 c_logoHeight * 12};
+	SDL_RenderCopy(renderer, logoTexture, &sourceRectangle, &destinationRectangle);
+
+	int currentY = 800;
+	const char* text = "A GAME MADE IN 8 DAYS BY";
+	renderText(renderer, tileSheet, (windowWidth / 2) - ((strlen(text) * c_scaledFontWidth) / 2), currentY, text);
+
+	currentY += c_scaledFontHeight + 20;
+	text = "MACOY MADSON    WILL CHAMBERS";
+	renderText(renderer, tileSheet, (windowWidth / 2) - ((strlen(text) * c_scaledFontWidth) / 2), currentY, text);
+
+	currentY += c_scaledFontHeight + 50;
+	text = "PRESS SPACE TO PLAY";
+	renderText(renderer, tileSheet, (windowWidth / 2) - ((strlen(text) * c_scaledFontWidth) / 2), currentY, text);
+
+	currentY += c_scaledFontHeight + 50;
+	text = "COPYRIGHT 2022  AVAILABLE UNDER TERMS OF GNU GENERAL PUBLIC LICENSE VERSION 3";
+	renderText(renderer, tileSheet, (windowWidth / 2) - ((strlen(text) * c_scaledFontWidth) / 2),
+	           currentY, text);
 }
 
 static void doTutorial(SDL_Renderer* renderer, TileSheet* tileSheet, int page)
@@ -1456,6 +1478,32 @@ static bool continuePressed()
 // Returns whether the game should be played
 bool doMainMenu(SDL_Window* window, SDL_Renderer* renderer, TileSheet* tileSheet)
 {
+	SDL_Texture* logoTexture = NULL;
+	{
+#define NO_DATA_BUNDLE
+#ifdef NO_DATA_BUNDLE
+		SDL_Surface* logoSurface = SDL_LoadBMP("assets/SpaceFactoryLogo.bmp");
+#else
+		SDL_RWops* logoRWOps =
+		    SDL_RWFromMem(startLogoBmp, endLogoBmp - startLogoBmp);
+		SDL_Surface* logoSurface = SDL_LoadBMP_RW(logoRWOps, /*freesrc=*/1);
+#endif
+		if (!logoSurface)
+		{
+			fprintf(stderr, "Failed to load logo\n");
+			return 1;
+		}
+		// Use pure black as our chroma key
+		SDL_SetColorKey(logoSurface, SDL_TRUE, SDL_MapRGB(logoSurface->format, 0, 0, 0));
+		logoTexture = SDL_CreateTextureFromSurface(renderer, logoSurface);
+		SDL_FreeSurface(logoSurface);
+		if (!logoTexture)
+		{
+			sdlPrintError();
+			return 1;
+		}
+	}
+
 	bool spaceDown = false;
 	bool leftMouseButtonDown = false;
 	char state = 0;
@@ -1501,7 +1549,7 @@ bool doMainMenu(SDL_Window* window, SDL_Renderer* renderer, TileSheet* tileSheet
 		switch (state)
 		{
 			case 0:
-				renderMainMenu(renderer, tileSheet);
+				renderMainMenu(renderer, tileSheet, logoTexture);
 				break;
 			case 1:
 				doTutorial(renderer, tileSheet, 0);
