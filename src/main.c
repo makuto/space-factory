@@ -41,7 +41,6 @@ bool pointInFRect(Vec2* point, SDL_FRect* rect)
 	       point->y < (rect->y + rect->h);
 }
 
-
 //
 // Constants
 //
@@ -371,60 +370,64 @@ struct RigidBody
 	Vec2 velocity;
 };
 
+bool objHittingGrid(RigidBody* gridPos, GridSpace* gridSheet, RigidBody* objPos)
+{
+	SDL_FRect playerBoundingBox = {
+	    gridPos->position.x,
+	    gridPos->position.y,
+	    (float)((gridSheet->width) * c_tileSize),
+	    (float)((gridSheet->height) * c_tileSize),
+	};
 
-
-bool objHittingGrid(RigidBody* gridPos, GridSpace* gridSheet, RigidBody* objPos){
-
-    SDL_FRect playerBoundingBox = { gridPos->position.x , 
-                                    gridPos->position.y , 
-                                    (float)((gridSheet->width)*c_tileSize),
-                                    (float)((gridSheet->height)*c_tileSize),
-                                    };
-
-    return(pointInFRect( &objPos->position, &playerBoundingBox));
+	return (pointInFRect(&objPos->position, &playerBoundingBox));
 }
 
+// Collision Detection
+IVec2 TileCoordinateHit(RigidBody* gridPos, GridSpace* gridSheet, RigidBody* objPos)
+{
+	assert(objHittingGrid(gridPos, gridSheet, objPos));
 
+	float objX = objPos->position.x;
+	float objY = objPos->position.y;
+	float gridX = gridPos->position.x;
+	float gridY = gridPos->position.y;
 
-//Collision Detection
-IVec2 TileCoordinateHit(RigidBody* gridPos, GridSpace* gridSheet, RigidBody* objPos){
-    assert(objHittingGrid(gridPos,gridSheet,objPos));
-    
-    float objX = objPos->position.x;
-    float objY = objPos->position.y;
-    float gridX = gridPos->position.x;
-    float gridY = gridPos->position.y;
-
-    float distToTop = abs(gridY - objY);
-    float distToBottom = abs(gridY+gridSheet->height*c_tileSize - objY);
-    float distToLeft = abs(gridX - objX);
-    float distToRight = abs(gridX + gridSheet->width*c_tileSize - objX);
-    int tileX;
-    int tileY;
-    if(distToTop < distToBottom && distToTop<distToLeft && distToTop < distToRight){
-        tileX = (int)(objX-gridX)/c_tileSize;
-        tileY = 0;
-        assert(tileX < gridSheet->width);
-        assert(tileY < gridSheet->height);
-    }else if(distToBottom < distToTop && distToBottom<distToLeft && distToBottom<distToRight){
-        tileX = (int)(objX-gridX)/c_tileSize;
-        tileY = gridSheet->height-1;
-        assert(tileX < gridSheet->width);
-        assert(tileY < gridSheet->height);
-    }else if (distToLeft < distToTop && distToLeft < distToBottom && distToLeft < distToRight){
-        tileX = 0;
-        tileY = (int)(objY-gridPos->position.y)/c_tileSize;
-        assert(tileX < gridSheet->width);
-        assert(tileY < gridSheet->height);
-    }else{//must be hitting the right side
-        tileX = gridSheet->width-1;
-        tileY = (int)(objY-gridPos->position.y)/c_tileSize;
-        assert(tileX < gridSheet->width);
-        assert(tileY < gridSheet->height);
-    }
-    return {tileX, tileY};
+	float distToTop = abs(gridY - objY);
+	float distToBottom = abs(gridY + gridSheet->height * c_tileSize - objY);
+	float distToLeft = abs(gridX - objX);
+	float distToRight = abs(gridX + gridSheet->width * c_tileSize - objX);
+	int tileX;
+	int tileY;
+	if (distToTop < distToBottom && distToTop < distToLeft && distToTop < distToRight)
+	{
+		tileX = (int)(objX - gridX) / c_tileSize;
+		tileY = 0;
+		assert(tileX < gridSheet->width);
+		assert(tileY < gridSheet->height);
+	}
+	else if (distToBottom < distToTop && distToBottom < distToLeft && distToBottom < distToRight)
+	{
+		tileX = (int)(objX - gridX) / c_tileSize;
+		tileY = gridSheet->height - 1;
+		assert(tileX < gridSheet->width);
+		assert(tileY < gridSheet->height);
+	}
+	else if (distToLeft < distToTop && distToLeft < distToBottom && distToLeft < distToRight)
+	{
+		tileX = 0;
+		tileY = (int)(objY - gridPos->position.y) / c_tileSize;
+		assert(tileX < gridSheet->width);
+		assert(tileY < gridSheet->height);
+	}
+	else
+	{  // must be hitting the right side
+		tileX = gridSheet->width - 1;
+		tileY = (int)(objY - gridPos->position.y) / c_tileSize;
+		assert(tileX < gridSheet->width);
+		assert(tileY < gridSheet->height);
+	}
+	return {tileX, tileY};
 }
-
 
 float Magnitude(Vec2* vec)
 {
@@ -518,14 +521,13 @@ void renderObjects(SDL_Renderer* renderer, TileSheet* tileSheet, Camera* camera,
 			Vec2 extrapolatedObjectPosition = currentObject->body.position;
 			if (!currentObject->inFactory)
 			{
-				extrapolatedObjectPosition.x = currentObject->body.position.x + 
-				                               (currentObject->body.velocity.x * extrapolateTime)
-                                               -c_tileSize/2;
-                                               
+				extrapolatedObjectPosition.x = currentObject->body.position.x +
+				                               (currentObject->body.velocity.x * extrapolateTime) -
+				                               c_tileSize / 2;
+
 				extrapolatedObjectPosition.y = currentObject->body.position.y +
-				                               (currentObject->body.velocity.y * extrapolateTime)
-                                               -c_tileSize/2
-                                               ;
+				                               (currentObject->body.velocity.y * extrapolateTime) -
+				                               c_tileSize / 2;
 			}
 			else
 			{
@@ -814,76 +816,77 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
 			currentObject->body.velocity.y = 0;
 			continue;
 		}
-        
-        if(objHittingGrid(playerPhys,playerShipData,&currentObject->body)){
-            IVec2 tileCoords = TileCoordinateHit(playerPhys, playerShipData, &currentObject->body);
-            unsigned char shipTileX = (unsigned char)tileCoords.x;
-            unsigned char shipTileY = (unsigned char)tileCoords.y;
-            GridCell cell  = GridCellAt(playerShipData,shipTileX,shipTileY);
 
-            if(isIntake(cell.type))
-            {
-                currentObject->body.position.x =
-                    (shipTileX * c_tileSize) + playerPhys->position.x;
-                currentObject->body.position.y =
-                    (shipTileY * c_tileSize) + playerPhys->position.y;
-                currentObject->body.velocity.x = 0;
-                currentObject->body.velocity.y = 0;
-                currentObject->tileX = shipTileX;
-                currentObject->tileY = shipTileY;
-                currentObject->inFactory = true;
-            }
-            else //collide with an edge of the ship, accounting for momentum 
-            {
-                float *objX = &currentObject->body.position.x;
-                float *objY = &currentObject->body.position.y;
-                float *objVX = &currentObject->body.velocity.x;
-                float *objVY = &currentObject->body.velocity.y;
-                float plyVX = playerPhys->velocity.x;
-                float plyVY = playerPhys->velocity.y;
-                //if the asteroid hits an edge, move it to the outside of the ship,
-                //then give it velocity
-              if(shipTileX==0)//hit left side
-              {
-                  if(*objX > playerPhys->position.x)
-                    *objX = playerPhys->position.x; 
+		if (objHittingGrid(playerPhys, playerShipData, &currentObject->body))
+		{
+			IVec2 tileCoords = TileCoordinateHit(playerPhys, playerShipData, &currentObject->body);
+			unsigned char shipTileX = (unsigned char)tileCoords.x;
+			unsigned char shipTileY = (unsigned char)tileCoords.y;
+			GridCell cell = GridCellAt(playerShipData, shipTileX, shipTileY);
 
-                  if(plyVX <= 0){
-                      *objVX = plyVX;
-                  }
-              } 
-              else if(shipTileX==playerShipData->width-1){//hit right side
+			if (isIntake(cell.type))
+			{
+				currentObject->body.position.x = (shipTileX * c_tileSize) + playerPhys->position.x;
+				currentObject->body.position.y = (shipTileY * c_tileSize) + playerPhys->position.y;
+				currentObject->body.velocity.x = 0;
+				currentObject->body.velocity.y = 0;
+				currentObject->tileX = shipTileX;
+				currentObject->tileY = shipTileY;
+				currentObject->inFactory = true;
+			}
+			else  // collide with an edge of the ship, accounting for momentum
+			{
+				float* objX = &currentObject->body.position.x;
+				float* objY = &currentObject->body.position.y;
+				float* objVX = &currentObject->body.velocity.x;
+				float* objVY = &currentObject->body.velocity.y;
+				float plyVX = playerPhys->velocity.x;
+				float plyVY = playerPhys->velocity.y;
+				// if the asteroid hits an edge, move it to the outside of the ship,
+				// then give it velocity
+				if (shipTileX == 0)  // hit left side
+				{
+					if (*objX > playerPhys->position.x)
+						*objX = playerPhys->position.x;
 
-                  if(*objX < playerPhys->position.x+playerShipData->width*c_tileSize)
-                    *objX = playerPhys->position.x+playerShipData->width*c_tileSize; 
+					if (plyVX <= 0)
+					{
+						*objVX = plyVX;
+					}
+				}
+				else if (shipTileX == playerShipData->width - 1)
+				{  // hit right side
 
-                  if(plyVX >= 0){
-                      *objVX = plyVX;
-                  }
-              }
-              else if(shipTileY==0){//hit top
-                  if(*objY > playerPhys->position.y)
-                    *objY = playerPhys->position.y;
-                  *objY = playerPhys->position.y;
-                  if(plyVY <= 0){
-                      *objVY=plyVY;
-                  }
-              }    
-              else if(shipTileY==playerShipData->height-1){//hit bottom
-                  if(*objY < playerPhys->position.y + playerShipData->height*c_tileSize)
-                    *objY = playerPhys->position.y + playerShipData->height*c_tileSize;
-                  if(plyVY >= 0){
-                      *objVY = plyVY;
-                  }
-              }    
+					if (*objX < playerPhys->position.x + playerShipData->width * c_tileSize)
+						*objX = playerPhys->position.x + playerShipData->width * c_tileSize;
 
-            }
-
-
-        };
-
-
-    }
+					if (plyVX >= 0)
+					{
+						*objVX = plyVX;
+					}
+				}
+				else if (shipTileY == 0)
+				{  // hit top
+					if (*objY > playerPhys->position.y)
+						*objY = playerPhys->position.y;
+					*objY = playerPhys->position.y;
+					if (plyVY <= 0)
+					{
+						*objVY = plyVY;
+					}
+				}
+				else if (shipTileY == playerShipData->height - 1)
+				{  // hit bottom
+					if (*objY < playerPhys->position.y + playerShipData->height * c_tileSize)
+						*objY = playerPhys->position.y + playerShipData->height * c_tileSize;
+					if (plyVY >= 0)
+					{
+						*objVY = plyVY;
+					}
+				}
+			}
+		};
+	}
 }
 
 //
@@ -1223,21 +1226,24 @@ static void renderMainMenu(SDL_Renderer* renderer, TileSheet* tileSheet, SDL_Tex
 	const int c_logoWidth = 99;
 	const int c_logoHeight = 57;
 	SDL_Rect sourceRectangle = {0, 0, c_logoWidth, c_logoHeight};
-	SDL_Rect destinationRectangle = {(windowWidth / 2) - ((c_logoWidth * 12) / 2), 100, c_logoWidth * 12,
-	                                 c_logoHeight * 12};
+	SDL_Rect destinationRectangle = {(windowWidth / 2) - ((c_logoWidth * 12) / 2), 100,
+	                                 c_logoWidth * 12, c_logoHeight * 12};
 	SDL_RenderCopy(renderer, logoTexture, &sourceRectangle, &destinationRectangle);
 
 	int currentY = 800;
 	const char* text = "A GAME MADE IN 8 DAYS BY";
-	renderText(renderer, tileSheet, (windowWidth / 2) - ((strlen(text) * c_scaledFontWidth) / 2), currentY, text);
+	renderText(renderer, tileSheet, (windowWidth / 2) - ((strlen(text) * c_scaledFontWidth) / 2),
+	           currentY, text);
 
 	currentY += c_scaledFontHeight + 20;
 	text = "MACOY MADSON    WILL CHAMBERS";
-	renderText(renderer, tileSheet, (windowWidth / 2) - ((strlen(text) * c_scaledFontWidth) / 2), currentY, text);
+	renderText(renderer, tileSheet, (windowWidth / 2) - ((strlen(text) * c_scaledFontWidth) / 2),
+	           currentY, text);
 
 	currentY += c_scaledFontHeight + 50;
 	text = "PRESS SPACE TO PLAY";
-	renderText(renderer, tileSheet, (windowWidth / 2) - ((strlen(text) * c_scaledFontWidth) / 2), currentY, text);
+	renderText(renderer, tileSheet, (windowWidth / 2) - ((strlen(text) * c_scaledFontWidth) / 2),
+	           currentY, text);
 
 	currentY += c_scaledFontHeight + 50;
 	text = "COPYRIGHT 2022  AVAILABLE UNDER TERMS OF GNU GENERAL PUBLIC LICENSE VERSION 3";
@@ -1251,7 +1257,7 @@ static void doTutorial(SDL_Renderer* renderer, TileSheet* tileSheet, int page)
 	const char* tutorialText[] = {
 	    "FREEDOM, CURIOSITY, SHARED DESTINY:\n"
 	    "THE CONGLOMERATE IS NOT HAPPY WITH YOU SPREADING THESE IDEALS\n\n"
-		"THEIR SHIP IS TRACKING YOU\n\n\n"
+	    "THEIR SHIP IS TRACKING YOU\n\n\n"
 	    "PRESS THE SPACE KEY TO CONTINUE",
 	    "YOU MUST REFINE ASTEROIDS INTO FUEL\n"
 	    "FUEL YOUR ENGINES TO MANEUVER THE SHIP\n\n"
@@ -1491,8 +1497,7 @@ bool doMainMenu(SDL_Window* window, SDL_Renderer* renderer, TileSheet* tileSheet
 #ifdef NO_DATA_BUNDLE
 		SDL_Surface* logoSurface = SDL_LoadBMP("assets/SpaceFactoryLogo.bmp");
 #else
-		SDL_RWops* logoRWOps =
-		    SDL_RWFromMem(startLogoBmp, endLogoBmp - startLogoBmp);
+		SDL_RWops* logoRWOps = SDL_RWFromMem(startLogoBmp, endLogoBmp - startLogoBmp);
 		SDL_Surface* logoSurface = SDL_LoadBMP_RW(logoRWOps, /*freesrc=*/1);
 #endif
 		if (!logoSurface)
@@ -1945,7 +1950,8 @@ GameplayResult doGameplay(SDL_Window* window, SDL_Renderer* renderer, TileSheet 
 				if (startPromptTimeToTypeOut < 0.f)
 					startPromptTimeToTypeOut = 0.f;
 				char promptLength = strlen(currentPrompt);
-				char typePromptLength = (promptLength * (c_typeOutTime - startPromptTimeToTypeOut)) / c_typeOutTime;
+				char typePromptLength =
+				    (promptLength * (c_typeOutTime - startPromptTimeToTypeOut)) / c_typeOutTime;
 				memset(typeOutPrompt, 0, sizeof(typeOutPrompt));
 				for (int i = 0; i < typePromptLength; ++i)
 				{
@@ -1956,9 +1962,8 @@ GameplayResult doGameplay(SDL_Window* window, SDL_Renderer* renderer, TileSheet 
 				           120, typeOutPrompt);
 				int phaseTimeLeft = phase->timeToCompleteSeconds - secondsInCurrentPhase;
 				if (phaseTimeLeft)
-					renderNumber(renderer, &tileSheet,
-					             (windowWidth / 2) - c_fontWidth,
-					             145, phaseTimeLeft);
+					renderNumber(renderer, &tileSheet, (windowWidth / 2) - c_fontWidth, 145,
+					             phaseTimeLeft);
 
 				bool failedPhase = false;
 				if (secondsInCurrentPhase >= phase->timeToCompleteSeconds)
