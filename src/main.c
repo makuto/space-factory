@@ -91,8 +91,15 @@ const float c_fuelConsumptionRate = 1.f;
 // Physics
 float playerDrag = 0.f;
 const float c_onFailurePlayerDrag = 0.1f;
-const float c_objectDrag = 0.1f;
-const float c_deadLimit = 0.02f;  // the minimum velocity below which we are stationary
+const float c_objectDrag = 0.05f;
+
+// These force transfer values fake Newton's Third Law of Motion (equal and opposite reactions) by
+// using hard-coded values rather than F=MA. This gives us more control over the feel.
+
+// Objects colliding with the ship will receive the player's velocity plus a bit more
+const float c_objectForceTransfer = 1.2f;
+// This will go straight to reducing player velocity, regardless of the object's velocity. By reducing the player's velocity, we give the asteriods a feeling of weight
+const float c_shipObjectForceTransfer = 8.f;
 
 // Factory
 const int c_maxFuel = 5;
@@ -439,10 +446,6 @@ void UpdatePhysics(RigidBody* object, float drag, float dt)
 	// update via implicit euler integration
 	object->velocity.x /= (1.f + (dt * drag));
 	object->velocity.y /= (1.f + (dt * drag));
-	//	 if(Magnitude(&object->velocity)<=c_deadLimit){
-	//		 object->velocity.x = 0;
-	//		 object->velocity.y = 0;
-	//	 }
 
 	object->position.x += object->velocity.x * dt;
 	object->position.y += object->velocity.y * dt;
@@ -851,7 +854,8 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
 
 					if (plyVX <= 0)
 					{
-						*objVX = plyVX;
+						*objVX = plyVX * c_objectForceTransfer;
+						playerPhys->velocity.x += c_shipObjectForceTransfer;
 					}
 				}
 				else if (shipTileX == playerShipData->width - 1)
@@ -862,7 +866,8 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
 
 					if (plyVX >= 0)
 					{
-						*objVX = plyVX;
+						*objVX = plyVX * c_objectForceTransfer;
+						playerPhys->velocity.x -= c_shipObjectForceTransfer;
 					}
 				}
 				else if (shipTileY == 0)
@@ -872,7 +877,8 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
 					*objY = playerPhys->position.y;
 					if (plyVY <= 0)
 					{
-						*objVY = plyVY;
+						*objVY = plyVY * c_objectForceTransfer;
+						playerPhys->velocity.y += c_shipObjectForceTransfer;
 					}
 				}
 				else if (shipTileY == playerShipData->height - 1)
@@ -881,7 +887,8 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
 						*objY = playerPhys->position.y + playerShipData->height * c_tileSize;
 					if (plyVY >= 0)
 					{
-						*objVY = plyVY;
+						*objVY = plyVY * c_objectForceTransfer;
+						playerPhys->velocity.y -= c_shipObjectForceTransfer;
 					}
 				}
 			}
