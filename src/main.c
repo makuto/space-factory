@@ -1243,8 +1243,8 @@ static void doEndScreenFailure(SDL_Renderer* renderer, TileSheet* tileSheet)
 	    "CREATED BY\n"
 	    "MACOY MADSON\n"
 	    "WILL CHAMBERS\n\n"
-	    "COPYRIGHT TWENTY TWENTY TWO\n"
-	    "AVAILABLE UNDER TERMS OF GNU GENERAL PUBLIC LICENSE VERSION THREE\n";
+	    "COPYRIGHT 2022\n"
+	    "AVAILABLE UNDER TERMS OF GNU GENERAL PUBLIC LICENSE VERSION 3\n";
 	renderText(renderer, tileSheet, 400, 200, endScreenFailure);
 }
 
