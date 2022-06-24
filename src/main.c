@@ -375,11 +375,12 @@ struct RigidBody
 
 bool objHittingGrid(RigidBody* gridPos, GridSpace* gridSheet, RigidBody* objPos){
 
-    SDL_FRect playerBoundingBox = {gridPos->position.x - c_tileSize, 
+    SDL_FRect playerBoundingBox = { gridPos->position.x - c_tileSize, 
                                     gridPos->position.y - c_tileSize, 
                                     (float)((gridSheet->width+1)*c_tileSize),
                                     (float)((gridSheet->height+1)*c_tileSize),
                                     };
+
     return(pointInFRect( &objPos->position, &playerBoundingBox));
 }
 
@@ -836,37 +837,39 @@ void updateObjects(RigidBody* playerPhys, GridSpace* playerShipData, float delta
                 float *objVY = &currentObject->body.velocity.y;
                 float plyVX = playerPhys->velocity.x;
                 float plyVY = playerPhys->velocity.y;
+                //if the asteroid hits an edge, move it to the outside of the ship,
+                //then give it velocity
               if(shipTileX==0)//hit left side
               {
-                  *objX = (float)((int)playerPhys->position.x-c_tileSize); 
+                  if(*objX > playerPhys->position.x)
+                    *objX = playerPhys->position.x-c_tileSize; 
+
                   if(plyVX <= 0){
-                      if(*objVX>0)
-                        *objVX = -currentObject->body.velocity.x;
-                      *objVX+=plyVX;
+                      *objVX = plyVX;
                   }
               } 
               else if(shipTileX==playerShipData->width-1){//hit right side
-                  *objX = (float)((int)playerPhys->position.x+playerShipData->width*c_tileSize); 
+
+                  if(*objX < playerPhys->position.x+playerShipData->width*c_tileSize)
+                    *objX = playerPhys->position.x+playerShipData->width*c_tileSize; 
+
                   if(plyVX >= 0){
-                      if(*objVX<0)
-                        *objVX = -currentObject->body.velocity.x;
-                      *objVX+=plyVX;
+                      *objVX = plyVX;
                   }
               }
               else if(shipTileY==0){//hit top
-                  *objY = (float)((int)playerPhys->position.y - c_tileSize);
+                  if(*objY > playerPhys->position.y)
+                    *objY = playerPhys->position.y;
+                  *objY = playerPhys->position.y - c_tileSize;
                   if(plyVY <= 0){
-                      if(*objVY>0)
-                        *objVY = -currentObject->body.velocity.x;
-                      *objVY+=plyVY;
+                      *objVY=plyVY;
                   }
               }    
               else if(shipTileY==playerShipData->height-1){//hit bottom
-                  *objY = (float)((int)playerPhys->position.y + playerShipData->height*c_tileSize);
+                  if(*objY < playerPhys->position.y + playerShipData->height*c_tileSize)
+                    *objY = playerPhys->position.y + playerShipData->height*c_tileSize;
                   if(plyVY >= 0){
-                      if(*objVY<0)
-                        *objVY = -currentObject->body.velocity.x;
-                      *objVY+=plyVY;
+                      *objVY = plyVY;
                   }
               }    
 
