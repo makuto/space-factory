@@ -504,6 +504,7 @@ typedef struct Object
 } Object;
 
 Object objects[1024] = {0};
+const int c_numObjectsToCreate = 400;
 
 void renderObjects(SDL_Renderer* renderer, TileSheet* tileSheet, Camera* camera,
                    Vec2 extrapolatedPlayerPosition, float extrapolateTime)
@@ -1013,7 +1014,7 @@ static void renderNumber(SDL_Renderer* renderer, TileSheet* tileSheet, int x, in
 
 static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWidth,
                      int windowHeight, IVec2 cameraPosition, Vec2 gridSpaceWorldPosition,
-                     GridSpace* editGridSpace)
+                     GridSpace* editGridSpace, unsigned short* inventory, int inventorySize)
 {
 	int mouseX = 0;
 	int mouseY = 0;
@@ -1062,10 +1063,13 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 	    // Engines
 	    /*ENGINE LEFT*/ Restrict_EdgeLeft, /*ENGINE RIGHT*/ Restrict_EdgeRight,
 	    /*ENGINE UP*/ Restrict_EdgeBottom, /*ENGINE DOWN*/ Restrict_EdgeTop};
-	static unsigned short inventory[] = {/*'#'=*/100, /*'.'=*/999, /*'<'=*/100, /*'>'=*/100,
-	                                     /*'A'=*/100, /*'V'=*/100, /*'f'=*/8,   /*'L'=*/8,
-	                                     /*'R'=*/8,   /*'U'=*/8,   /*'D'=*/8,
-	                                     /*'l'=*/8,   /*'r'=*/8,   /*'u'=*/8,   /*'d'=*/8};
+
+	assert(inventorySize == ARRAY_SIZE(editButtons) &&
+	       ARRAY_SIZE(editButtonLabels) == ARRAY_SIZE(editButtons) &&
+	       ARRAY_SIZE(restrictions) == ARRAY_SIZE(editButtons) &&
+	       "An array for the edit UI has gotten out of sync. Check that it has the same number of "
+	       "elements as editButtons.");
+
 	const int c_buttonMarginX = 22;
 	int startButtonBarX =
 	    ((windowWidth / 2) - ((ARRAY_SIZE(editButtons) * (c_tileSize + c_buttonMarginX)) / 2));
@@ -1709,15 +1713,22 @@ GameplayResult doGameplay(SDL_Window* window, SDL_Renderer* renderer, TileSheet 
 	float timeSinceFailedPhaseDamage = 0.f;
 
 	// Make some objects
-	for (int i = 0; i < 400; ++i)
+	memset(objects, 0, sizeof(objects));
+	for (int i = 0; i < c_numObjectsToCreate; ++i)
 	{
-		Object* testObject = &objects[i];
-		testObject->type = 'a';
-		testObject->body.position.x = (float)(rand() % c_spaceSize);
-		testObject->body.position.y = (float)(rand() % c_spaceSize);
-		testObject->body.velocity.x = (float)((rand() % 50) - 25);
-		testObject->body.velocity.y = (float)((rand() % 50) - 25);
+		Object* object = &objects[i];
+		object->type = 'a';
+		object->body.position.x = (float)(rand() % c_spaceSize);
+		object->body.position.y = (float)(rand() % c_spaceSize);
+		object->body.velocity.x = (float)((rand() % 50) - 25);
+		object->body.velocity.y = (float)((rand() % 50) - 25);
 	}
+
+	// Player inventory (MUST MATCH size of editor buttons)
+	unsigned short inventory[] = {/*'#'=*/100, /*'.'=*/999, /*'<'=*/100, /*'>'=*/100,
+	                              /*'A'=*/100, /*'V'=*/100, /*'f'=*/8,   /*'L'=*/8,
+	                              /*'R'=*/8,   /*'U'=*/8,   /*'D'=*/8,
+	                              /*'l'=*/8,   /*'r'=*/8,   /*'u'=*/8,   /*'d'=*/8};
 
 	// Main loop
 	bool enableDebugUI = false;
@@ -2025,7 +2036,7 @@ GameplayResult doGameplay(SDL_Window* window, SDL_Renderer* renderer, TileSheet 
 
 			IVec2 cameraPosition = {(int)camera.x, (int)camera.y};
 			doEditUI(renderer, &tileSheet, windowWidth, windowHeight, cameraPosition,
-			         extrapolatedPlayerPosition, &playerShipData);
+			         extrapolatedPlayerPosition, &playerShipData, inventory, ARRAY_SIZE(inventory));
 		}
 
 		// Draw this even after the game is over
