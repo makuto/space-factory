@@ -2082,11 +2082,19 @@ GameplayResult doGameplay(SDL_Window* window, SDL_Renderer* renderer, TileSheet 
 }
 
 #ifdef WINDOWS
+void SetDPIAware();
+#endif
+
+#ifdef WINDOWS
 int WinMain(int numArguments, char** arguments)
 #else
 int main(int numArguments, char** arguments)
 #endif
 {
+#ifdef WINDOWS
+	SetDPIAware();
+#endif
+
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
 	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
