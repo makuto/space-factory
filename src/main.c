@@ -16,24 +16,31 @@
 //
 
 #ifndef NO_DATA_BUNDLE
+#ifdef WINDOWS
+extern unsigned char* startTilesheetBmp;
+extern unsigned char* endTilesheetBmp;
+extern unsigned char* startLogoBmp;
+extern unsigned char* endLogoBmp;
+#else
 extern unsigned char _binary_assets_TileSheet_bmp_start;
 extern unsigned char _binary_assets_TileSheet_bmp_end;
 static unsigned char* startTilesheetBmp = (&_binary_assets_TileSheet_bmp_start);
 static unsigned char* endTilesheetBmp = (&_binary_assets_TileSheet_bmp_end);
 #endif
+#endif
 
 // Math
-struct Vec2
+typedef struct Vec2
 {
 	float x;
 	float y;
-};
+} Vec2;
 
-struct IVec2
+typedef struct IVec2
 {
 	int x;
 	int y;
-};
+} IVec2;
 
 bool pointInFRect(Vec2* point, SDL_FRect* rect)
 {
@@ -52,8 +59,11 @@ const char c_tileSize = 32;
 
 const int c_fontWidth = 7;
 const int c_fontHeight = 10;
-const int c_scaledFontWidth = c_fontWidth * 2;
-const int c_scaledFontHeight = c_fontHeight * 2;
+// Evidently you cannot actually do this in C
+/* static const int c_scaledFontWidth = c_fontWidth * 2; */
+const int c_scaledFontWidth = /*c_fontWidth * 2*/14;
+/* static const int c_scaledFontHeight = c_fontHeight * 2; */
+const int c_scaledFontHeight = /*c_fontHeight * 2*/20;
 
 const float c_typeOutTime = 0.75f;
 
@@ -61,10 +71,10 @@ const float c_simulateUpdateRate = 1.f / 60.f;
 
 // space
 const int c_spaceSize = 10000;
-const int c_spawnBuffer = c_spaceSize / 10;  // 10% margins
+const int c_spawnBuffer = /*c_spaceSize / 10*/1000;  // 10% margins
 
 // goal
-const int c_goalSize = c_tileSize * 5;
+const int c_goalSize = /*c_tileSize * 5*/160;
 const int c_goalMinimapScaleFactor = 2;
 
 // On failure
@@ -110,21 +120,21 @@ const unsigned char c_furnaceTransitionPerSecond = 100;
 //
 // Factory Cells
 //
-struct EngineCell
+typedef struct EngineCell
 {
 	float fuel;
 	bool firing;
-};
+} EngineCell;
 
 //
 // Grid
 //
 
-struct GridCell
+typedef struct GridCell
 {
 	unsigned char type;
 	EngineCell engineCell;
-};
+} GridCell;
 
 typedef struct GridSpace
 {
@@ -371,11 +381,11 @@ static void renderStarField(SDL_Renderer* renderer, Camera* camera, int windowWi
 // Physics
 //
 
-struct RigidBody
+typedef struct RigidBody
 {
 	Vec2 position;
 	Vec2 velocity;
-};
+} RigidBody;
 
 bool objHittingGrid(RigidBody* gridPos, GridSpace* gridSheet, RigidBody* objPos)
 {
@@ -433,7 +443,8 @@ IVec2 TileCoordinateHit(RigidBody* gridPos, GridSpace* gridSheet, RigidBody* obj
 		assert(tileX < gridSheet->width);
 		assert(tileY < gridSheet->height);
 	}
-	return {tileX, tileY};
+	IVec2 result = {tileX, tileY};
+	return result;
 }
 
 float Magnitude(Vec2* vec)
@@ -1366,7 +1377,8 @@ IVec2 toMiniMapCoordinates(float worldCoordX, float worldCoordY)
 {
 	float nWorldCoordX = worldCoordX / c_spaceSize;
 	float nWorldCoordY = worldCoordY / c_spaceSize;
-	return {(int)(nWorldCoordX * c_miniMapSize), (int)(nWorldCoordY * c_miniMapSize)};
+	IVec2 result = {(int)(nWorldCoordX * c_miniMapSize), (int)(nWorldCoordY * c_miniMapSize)};
+	return result;
 }
 
 SDL_Rect scaleRectToMinimap(float x, float y, float w, float h)
@@ -1380,7 +1392,8 @@ SDL_Rect scaleRectToMinimap(float x, float y, float w, float h)
 	if (miniMapWH.y == 0)
 		miniMapWH.y = 1;
 
-	return {miniMapXY.x, miniMapXY.y, miniMapWH.x, miniMapWH.y};
+	SDL_Rect result = {miniMapXY.x, miniMapXY.y, miniMapWH.x, miniMapWH.y};
+	return result;
 }
 
 void renderMiniMap(SDL_Renderer* renderer, int windowWidth, int windowHeight, Vec2* playerPos,
@@ -1448,41 +1461,41 @@ static void renderFactoryGuide(SDL_Renderer* renderer, TileSheet* tileSheet)
 	renderText(renderer, tileSheet, 100, currentY, "USE THE MOUSE TO EDIT SHIP");
 	currentY += 40;
 	renderText(renderer, tileSheet, 100, currentY, "INTAKES MOVE ASTEROIDS THEY TOUCH INSIDE\n");
-	tutorialGridCells[0] = {'a'};
-	tutorialGridCells[1] = {'L'};
-	tutorialGridCells[2] = {'>'};
+	tutorialGridCells[0].type = 'a';
+	tutorialGridCells[1].type = 'L';
+	tutorialGridCells[2].type = '>';
 	renderGridSpaceFromTileSheet(renderer, tileSheet, &tutorialGrid, 120, currentY + 20 + 7, 0, 0);
 	currentY += 20 + 32 + addMargin;
 	renderText(renderer, tileSheet, 100, currentY, "FURNACES REFINE ASTEROIDS INTO FUEL\n");
 	memset(tutorialGridCells, 0, sizeof(tutorialGridCells));
-	/* tutorialGridCells[0] = {'>'}; */
-	/* tutorialGridCells[1] = {'f'}; */
-	/* tutorialGridCells[2] = {'>'}; */
+	/* tutorialGridCells[0].type = '>'; */
+	/* tutorialGridCells[1].type = 'f'; */
+	/* tutorialGridCells[2].type = '>'; */
 
-	tutorialGridCells[0] = {'a'};
-	tutorialGridCells[1] = {'>'};
-	tutorialGridCells[2] = {'f'};
-	tutorialGridCells[3] = {'>'};
-	tutorialGridCells[4] = {'g'};
+	tutorialGridCells[0].type = 'a';
+	tutorialGridCells[1].type = '>';
+	tutorialGridCells[2].type = 'f';
+	tutorialGridCells[3].type = '>';
+	tutorialGridCells[4].type = 'g';
 	renderGridSpaceFromTileSheet(renderer, tileSheet, &tutorialGrid, 120, currentY + 20 + 7, 0, 0);
 	currentY += 20 + 32 + addMargin;
 	renderText(renderer, tileSheet, 100, currentY,
 	           "FURNACES OUTPUT TO RANDOM ADJACENT OUTGOING CONVEYORS\n");
 	memset(tutorialGridCells, 0, sizeof(tutorialGridCells));
-	GridCellAt(&tutorialGrid, 1, 1) = {'f'};
-	GridCellAt(&tutorialGrid, 0, 1) = {'>'};
-	GridCellAt(&tutorialGrid, 1, 0) = {'V'};
-	GridCellAt(&tutorialGrid, 1, 2) = {'V'};
-	GridCellAt(&tutorialGrid, 2, 1) = {'>'};
+	GridCellAt(&tutorialGrid, 1, 1).type = 'f';
+	GridCellAt(&tutorialGrid, 0, 1).type = '>';
+	GridCellAt(&tutorialGrid, 1, 0).type = 'V';
+	GridCellAt(&tutorialGrid, 1, 2).type = 'V';
+	GridCellAt(&tutorialGrid, 2, 1).type = '>';
 	renderGridSpaceFromTileSheet(renderer, tileSheet, &tutorialGrid, 120, currentY + 20 + 7, 0, 0);
 	currentY += 20 + (32 * 3) + addMargin;
 	renderText(renderer, tileSheet, 100, currentY, "ENGINES ONLY ACCEPT REFINED FUEL\n");
 	memset(tutorialGridCells, 0, sizeof(tutorialGridCells));
-	tutorialGridCells[0] = {'L'};
-	tutorialGridCells[1] = {'>'};
-	tutorialGridCells[2] = {'f'};
-	tutorialGridCells[3] = {'>'};
-	tutorialGridCells[4] = {'r'};
+	tutorialGridCells[0].type = 'L';
+	tutorialGridCells[1].type = '>';
+	tutorialGridCells[2].type = 'f';
+	tutorialGridCells[3].type = '>';
+	tutorialGridCells[4].type = 'r';
 	renderGridSpaceFromTileSheet(renderer, tileSheet, &tutorialGrid, 120, currentY + 20 + 7, 0, 0);
 }
 
@@ -1929,7 +1942,7 @@ GameplayResult doGameplay(SDL_Window* window, SDL_Renderer* renderer, TileSheet 
 						// Max health
 						GridCell shipHealthCells[10] = {0};
 						for (int i = 0; i < remainingHealth; ++i)
-							shipHealthCells[i] = {'#'};
+							shipHealthCells[i].type = '#';
 						shipHealth.data = shipHealthCells;
 						renderGridSpaceFromTileSheet(renderer, &tileSheet, &shipHealth, 100,
 						                             300 - 20, 0, 0);
@@ -2068,7 +2081,11 @@ GameplayResult doGameplay(SDL_Window* window, SDL_Renderer* renderer, TileSheet 
 	return GameplayResult_ExitGame;
 }
 
+#ifdef WINDOWS
+int WinMain(int numArguments, char** arguments)
+#else
 int main(int numArguments, char** arguments)
+#endif
 {
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);

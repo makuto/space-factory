@@ -1,4 +1,6 @@
 (set-cakelisp-option cakelisp-src-dir "Dependencies/cakelisp/src")
+(set-cakelisp-option cakelisp-lib-dir "Dependencies/cakelisp/bin")
+
 (add-cakelisp-search-directory "Dependencies/gamelib/src")
 (add-cakelisp-search-directory "Dependencies/cakelisp/runtime")
 (add-cakelisp-search-directory "src")
