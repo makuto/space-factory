@@ -1025,7 +1025,8 @@ static void renderNumber(SDL_Renderer* renderer, TileSheet* tileSheet, int x, in
 
 static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWidth,
                      int windowHeight, IVec2 cameraPosition, Vec2 gridSpaceWorldPosition,
-                     GridSpace* editGridSpace, unsigned short* inventory, int inventorySize)
+                     GridSpace* editGridSpace, unsigned short* inventory, int inventorySize,
+                     float* fuelPool)
 {
 	int mouseX = 0;
 	int mouseY = 0;
@@ -1089,6 +1090,10 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 	const int c_toolTipMargin = 28;
 
 	renderText(renderer, tileSheet, startButtonBarX, buttonBarY - 25, "INVENTORY");
+
+	renderText(renderer, tileSheet, startButtonBarX + 475, buttonBarY - 25, "FUEL IN RESERVE");
+	renderNumber(renderer, tileSheet, startButtonBarX + 700, buttonBarY - 25,
+	             (unsigned int)(*fuelPool * 10.f));
 
 	for (int buttonIndex = 0; buttonIndex < ARRAY_SIZE(editButtons); ++buttonIndex)
 	{
@@ -1228,13 +1233,27 @@ static void doEditUI(SDL_Renderer* renderer, TileSheet* tileSheet, int windowWid
 			for (int buttonIndex = 0; buttonIndex < ARRAY_SIZE(editButtons); ++buttonIndex)
 			{
 				if (selectedCell->type == editButtons[buttonIndex])
+				{
 					inventory[buttonIndex] += 1;
+					if (isEngineTile(selectedCell->type))
+						*fuelPool += selectedCell->engineCell.fuel;
+					break;
+				}
 			}
 
 			// Make the placement
 			inventory[currentSelectedButtonIndex] -= 1;
 			memset(selectedCell, 0, sizeof(GridCell));
 			selectedCell->type = editButtons[currentSelectedButtonIndex];
+			if (isEngineTile(selectedCell->type))
+			{
+				float fuelToAdd = *fuelPool >= c_defaultStartFuel ? c_defaultStartFuel : *fuelPool;
+				if (fuelToAdd > 0.f)
+				{
+					selectedCell->engineCell.fuel = fuelToAdd;
+					*fuelPool -= fuelToAdd;
+				}
+			}
 		}
 	}
 }
@@ -1741,7 +1760,10 @@ GameplayResult doGameplay(SDL_Window* window, SDL_Renderer* renderer, TileSheet 
 	unsigned short inventory[] = {/*'#'=*/100, /*'.'=*/999, /*'<'=*/100, /*'>'=*/100,
 	                              /*'A'=*/100, /*'V'=*/100, /*'f'=*/8,   /*'L'=*/8,
 	                              /*'R'=*/8,   /*'U'=*/8,   /*'D'=*/8,
-	                              /*'l'=*/8,   /*'r'=*/8,   /*'u'=*/8,   /*'d'=*/8};
+	                              /*'l'=*/4,   /*'r'=*/4,   /*'u'=*/4,   /*'d'=*/4};
+
+	// Enough to fuel two engines per side
+	float constructionFuelPool = 4 * 2 * c_defaultStartFuel;
 
 	// Main loop
 	bool enableDebugUI = false;
@@ -2049,7 +2071,8 @@ GameplayResult doGameplay(SDL_Window* window, SDL_Renderer* renderer, TileSheet 
 
 			IVec2 cameraPosition = {(int)camera.x, (int)camera.y};
 			doEditUI(renderer, &tileSheet, windowWidth, windowHeight, cameraPosition,
-			         extrapolatedPlayerPosition, &playerShipData, inventory, ARRAY_SIZE(inventory));
+			         extrapolatedPlayerPosition, &playerShipData, inventory, ARRAY_SIZE(inventory),
+			         &constructionFuelPool);
 		}
 
 		// Draw this even after the game is over
