@@ -2,6 +2,8 @@
 
 A prototype for a game where your space ship is also a factory.
 
+[[images/SpaceFactoryGameplay.jpg]]
+
 * Setup
 
 #+BEGIN_SRC sh
