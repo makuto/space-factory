@@ -1,6 +1,6 @@
 [submodule "Dependencies/cakelisp"]
 	path = Dependencies/cakelisp
-	url = https://github.com/makuto/cakelisp.git
+	url = https://macoy.me/code/macoy/cakelisp.git
 [submodule "Dependencies/gamelib"]
 	path = Dependencies/gamelib
 	url = https://macoy.me/code/macoy/gamelib.git
